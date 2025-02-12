@@ -112,9 +112,5 @@ def load_data_from_csv():
 def populate_database():
     create_tables()  # Create tables
     load_data_from_csv()  # Load data from CSV and insert into database
-    cursor.close()  # Close the cursor
-    data_base.close()  # Close the database connection
-    print("Database connection closed.")
-
-# Call the populate_database function to execute everything
-populate_database()
+    ## data_base.close()  # Close the database connection
+    #print("Database connection closed.")
