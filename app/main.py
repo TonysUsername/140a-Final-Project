@@ -80,7 +80,6 @@ async def get_all_data(sensor_type: str,
     except HTTPException as e:
         raise e
 
-# Route to get the count of rows for a given sensor type
 @app.get("/api/{sensor_type}/count")
 async def get_count(sensor_type: str):
     valid_sensor_types = ["temperature", "light", "humidity"]
@@ -88,7 +87,7 @@ async def get_count(sensor_type: str):
         raise HTTPException(status_code=404, detail="Sensor not found")
     
     try:
-        # Establish a new database connection and cursor for this request
+        # Open a new connection and cursor within the function
         data_base = mysql.connect(
             host=db_host,
             user=db_user,
@@ -101,29 +100,15 @@ async def get_count(sensor_type: str):
         cursor.execute(query)
         result = cursor.fetchone()
         
-        # Check if result is None or there's an issue with the query
-        if result is None:
-            raise HTTPException(status_code=500, detail="Failed to fetch data from the database.")
-        
-        print(f"Query Result for {sensor_type} count: {result[0]}")
-
-        # Close cursor and database connection
-        cursor.close()
-        data_base.close()
+        cursor.close()  
+        data_base.close()  
         
         return {"count": result[0]}
-    
     except mysql.Error as err:
-        # Log MySQL error for debugging
-        print(f"Database Error: {err}")
         raise HTTPException(status_code=500, detail=f"Database error: {err}")
-    
-    except Exception as e:
-        # Catch any other errors
-        print(f"Unexpected Error: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
 
 
-# Main entry point to start the FastAPI app
+
 if __name__ == "__main__":
-    uvicorn.run(app="app.main:app", host="0.0.0.0", port=6543, reload=True)
+   uvicorn.run(app="app.main:app", host="0.0.0.0", port=6543, reload=True)
+
