@@ -31,12 +31,13 @@ except mysql.Error as warning:
     print(f"Error: {warning}")
 
 # Create tables
-def our_tables():
+def create_tables():
     create_temp_table = """
         CREATE TABLE IF NOT EXISTS temperature(
             id INT AUTO_INCREMENT PRIMARY KEY,
             timestamp DATETIME,
-            temp_value FLOAT
+            value FLOAT,
+            unit VARCHAR(50) DEFAULT 'Celsius'
         )
     """
     
@@ -44,7 +45,8 @@ def our_tables():
         CREATE TABLE IF NOT EXISTS light(
             id INT AUTO_INCREMENT PRIMARY KEY,
             timestamp DATETIME,
-            lite_val FLOAT
+            value FLOAT,
+            unit VARCHAR(50) DEFAULT 'Lux'
         )
     """
     
@@ -52,7 +54,8 @@ def our_tables():
         CREATE TABLE IF NOT EXISTS humidity(
             id INT AUTO_INCREMENT PRIMARY KEY,
             timestamp DATETIME,
-            humidity_value FLOAT
+            value FLOAT,
+            unit VARCHAR(50) DEFAULT 'Percentage'
         )
     """
     
@@ -67,7 +70,7 @@ def our_tables():
         print(f"Error creating tables: {err}")
 
 # Retrieve data from CSV and insert it into the database
-def retrieve_data():
+def load_data_from_csv():
     temperature_csv = "./sample/temperature.csv"
     humidity_csv = "./sample/humidity.csv"
     light_csv = "./sample/light.csv"
@@ -82,37 +85,36 @@ def retrieve_data():
         return
   
     try:
-        # Insert temperature data into the database
         temp_query = """
-            INSERT INTO temperature (timestamp, temp_value)
-            VALUES (%s, %s)
+            INSERT INTO temperature (timestamp, value, unit)
+            VALUES (%s, %s, %s)
         """
-        cursor.executemany(temp_query, temperature_data[['timestamp', 'value']].values.tolist())
+        cursor.executemany(temp_query, temperature_data[['timestamp', 'value']].assign(unit='Celsius').values.tolist())
 
-        # Insert light data into the database
         light_query = """
-            INSERT INTO light (timestamp, lite_val)
-            VALUES (%s, %s)
+            INSERT INTO light (timestamp, value, unit)
+            VALUES (%s, %s, %s)
         """
-        cursor.executemany(light_query, light_data[['timestamp', 'value']].values.tolist())
+        cursor.executemany(light_query, light_data[['timestamp', 'value']].assign(unit='Lux').values.tolist())
 
-        # Insert humidity data into the database
         humin_query = """
-            INSERT INTO humidity (timestamp, humidity_value)
-            VALUES (%s, %s)
+            INSERT INTO humidity (timestamp, value, unit)
+            VALUES (%s, %s, %s)
         """
-        cursor.executemany(humin_query, humidity_data[['timestamp', 'value']].values.tolist())
+        cursor.executemany(humin_query, humidity_data[['timestamp', 'value']].assign(unit='Percentage').values.tolist())
 
-        # Commit the changes to the database
         data_base.commit()
         print("Data loaded into tables successfully.")
     except mysql.Error as err:
         print(f"Error inserting data into database: {err}")
 
+# Main function to populate the database
 def populate_database():
-    our_tables()  
-    retrieve_data()  
-    cursor.close()
-    data_base.close()
+    create_tables()  # Create tables
+    load_data_from_csv()  # Load data from CSV and insert into database
+    cursor.close()  # Close the cursor
+    data_base.close()  # Close the database connection
     print("Database connection closed.")
 
+# Call the populate_database function to execute everything
+populate_database()

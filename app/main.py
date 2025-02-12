@@ -44,7 +44,7 @@ def get_sensory_data(sensor_type, order_by=None, start_date=None, end_date=None)
     
     if order_by:
         if order_by == "value":
-            query += " ORDER BY temp_value" if sensor_type == "temperature" else " ORDER BY lite_val" if sensor_type == "light" else " ORDER BY humidity_value"
+            query += " ORDER BY value" if sensor_type == "temperature" else " ORDER BY value" if sensor_type == "light" else " ORDER BY value"
         elif order_by == "timestamp":
             query += " ORDER BY timestamp"
     
@@ -72,13 +72,13 @@ async def put_data(sensor_type: str, sensor_data: SensorData):
         timestamp = sensor_data.timestamp or datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         
         if sensor_type == "temperature":
-            query = "INSERT INTO temperature (timestamp, temp_value) VALUES (%s, %s)"
+            query = "INSERT INTO temperature (timestamp, value, unit) VALUES (%s, %s)"
             values = (timestamp, sensor_data.value)
         elif sensor_type == "light":
-            query = "INSERT INTO light (timestamp, lite_val) VALUES (%s, %s)"
+            query = "INSERT INTO light (timestamp, value, unit) VALUES (%s, %s)"
             values = (timestamp, sensor_data.value)
         elif sensor_type == "humidity":
-            query = "INSERT INTO humidity (timestamp, humidity_value) VALUES (%s, %s)"
+            query = "INSERT INTO humidity (timestamp, value, unit) VALUES (%s, %s)"
             values = (timestamp, sensor_data.value)
         
         cursor.execute(query, values)
@@ -97,7 +97,7 @@ async def get_data_id(sensor_type: str, id: int):
         raise HTTPException(status_code=404, detail="Sensor not found")
     
     try:
-        query = f"SELECT * FROM {sensor_type} WHERE id = %s"
+        query = f"SELECT id, timestamp, value, unit FROM {sensor_type} WHERE id = %s"
         cursor.execute(query, (id,))
         result = cursor.fetchone()
         
