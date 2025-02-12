@@ -5,6 +5,7 @@ from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel
 from datetime import datetime
 from dotenv import load_dotenv
+from app.database import populate_database
 
 # Load environment variables
 load_dotenv()
@@ -24,18 +25,7 @@ data_base = mysql.connect(
 
 cursor = data_base.cursor()
 
-def create_tables():
-    # Create tables (same code as before)
-    pass
-
-def load_data_from_csv():
-    # Load data from CSV files (same code as before)
-    pass
-
-def populate_database():
-    create_tables()
-    load_data_from_csv()
-    print("Database populated.")
+populate_database()
 
 # Initialize FastAPI app
 app = FastAPI()
