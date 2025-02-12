@@ -6,34 +6,18 @@ from pydantic import BaseModel
 from datetime import datetime
 from dotenv import load_dotenv
 from app.database import populate_database
+
 # Initialize FastAPI app
 app = FastAPI()
 
 # Load environment variables
 load_dotenv()
 
-# Database connection
+# Database connection details from environment variables
 db_host = os.getenv("MYSQL_HOST")
 db_user = os.getenv("MYSQL_USER")
 db_database = os.getenv("MYSQL_DATABASE")
 db_password = os.getenv("MYSQL_PASSWORD")
-
-data_base = mysql.connect(
-    host=db_host,
-    user=db_user,
-    password=db_password,
-    database=db_database
-)
-
-cursor = data_base.cursor()
-
-populate_database()
-
-
-class SensorData(BaseModel):
-    value: float
-    unit: str
-    timestamp: str = None  # Optional timestamp
 
 # Helper function to validate date format
 def correct_date_time(value: str):
@@ -68,8 +52,20 @@ def get_sensory_data(sensor_type, order_by=None, start_date=None, end_date=None)
         elif order_by == "timestamp":
             query += " ORDER BY timestamp"
     
+    data_base = mysql.connect(
+        host=db_host,
+        user=db_user,
+        password=db_password,
+        database=db_database
+    )
+    cursor = data_base.cursor()
+    
     cursor.execute(query, tuple(parameters))
     result = cursor.fetchall()
+    
+    cursor.close() 
+    data_base.close() 
+    
     return result
 
 # Route to get all data for a given sensor type with optional query parameters
@@ -84,6 +80,34 @@ async def get_all_data(sensor_type: str,
     except HTTPException as e:
         raise e
 
-if __name__ == "__main__":
-   uvicorn.run(app="app.main:app", host="0.0.0.0", port=6543, reload=True)
+# Route to get the count of rows for a given sensor type
+@app.get("/api/{sensor_type}/count")
+async def get_count(sensor_type: str):
+    valid_sensor_types = ["temperature", "light", "humidity"]
+    if sensor_type not in valid_sensor_types:
+        raise HTTPException(status_code=404, detail="Sensor not found")
+    
+    try:
+        # Open a new connection and cursor within the function
+        data_base = mysql.connect(
+            host=db_host,
+            user=db_user,
+            password=db_password,
+            database=db_database
+        )
+        cursor = data_base.cursor()
+        
+        query = f"SELECT COUNT(*) FROM {sensor_type}"
+        cursor.execute(query)
+        result = cursor.fetchone()
+        
+        cursor.close()  
+        data_base.close()  
+        
+        return {"count": result[0]}
+    except mysql.Error as err:
+        raise HTTPException(status_code=500, detail=f"Database error: {err}")
 
+# Main entry point to start the FastAPI app
+if __name__ == "__main__":
+    uvicorn.run(app="app.main:app", host="0.0.0.0", port=6543, reload=True)
