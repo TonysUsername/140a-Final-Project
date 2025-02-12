@@ -88,7 +88,7 @@ async def get_count(sensor_type: str):
         raise HTTPException(status_code=404, detail="Sensor not found")
     
     try:
-        # Open a new connection and cursor within the function
+        # Establish a new database connection and cursor for this request
         data_base = mysql.connect(
             host=db_host,
             user=db_user,
@@ -101,12 +101,28 @@ async def get_count(sensor_type: str):
         cursor.execute(query)
         result = cursor.fetchone()
         
-        cursor.close()  
-        data_base.close()  
+        # Check if result is None or there's an issue with the query
+        if result is None:
+            raise HTTPException(status_code=500, detail="Failed to fetch data from the database.")
+        
+        print(f"Query Result for {sensor_type} count: {result[0]}")
+
+        # Close cursor and database connection
+        cursor.close()
+        data_base.close()
         
         return {"count": result[0]}
+    
     except mysql.Error as err:
+        # Log MySQL error for debugging
+        print(f"Database Error: {err}")
         raise HTTPException(status_code=500, detail=f"Database error: {err}")
+    
+    except Exception as e:
+        # Catch any other errors
+        print(f"Unexpected Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
+
 
 # Main entry point to start the FastAPI app
 if __name__ == "__main__":
