@@ -66,3 +66,8 @@ async def get_all_data(sensor_type: str,
     except HTTPException as e:
         raise e
 
+
+
+# Run the app
+if __name__ == "__main__":
+    uvicorn.run(app="app.main:app", host="0.0.0.0", port=6543, reload=True)
