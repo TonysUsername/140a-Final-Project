@@ -108,12 +108,10 @@ def retrieve_data():
         print("Data loaded into tables successfully.")
     except mysql.Error as err:
         print(f"Error inserting data into database: {err}")
-# Populate the database by creating tables and retrieving data
-def populate_database():
-    our_tables()  # Ensure tables are created
-    retrieve_data()  # Load the data
 
-    # Close the database connection after operations are complete
+def populate_database():
+    our_tables()  
+    retrieve_data()  
     cursor.close()
     data_base.close()
     print("Database connection closed.")
