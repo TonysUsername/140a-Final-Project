@@ -6,6 +6,8 @@ from pydantic import BaseModel
 from datetime import datetime
 from dotenv import load_dotenv
 from app.database import populate_database
+# Initialize FastAPI app
+app = FastAPI()
 
 # Load environment variables
 load_dotenv()
@@ -27,8 +29,6 @@ cursor = data_base.cursor()
 
 populate_database()
 
-# Initialize FastAPI app
-app = FastAPI()
 
 class SensorData(BaseModel):
     value: float
@@ -84,6 +84,6 @@ async def get_all_data(sensor_type: str,
     except HTTPException as e:
         raise e
 
-# Run the app
 if __name__ == "__main__":
-    uvicorn.run(app="main:app", host="0.0.0.0", port=6543, reload=True)
+   uvicorn.run(app="app.main:app", host="0.0.0.0", port=6543, reload=True)
+
