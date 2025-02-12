@@ -3,38 +3,55 @@ import uvicorn
 from fastapi import FastAPI, HTTPException, Query
 from app.database import populate_database, cursor, data_base
 from pydantic import BaseModel
+from datetime import datetime
+
 app = FastAPI()
-#initalize the databse by calling the function
+
+# Initialize the database by calling the function
 populate_database()
 
-#define the requests:
+# Define the request model
 class SensorData(BaseModel):
     value: float
     unit: str
-    timestamp: str = None
+    timestamp: str = None  # optional timestamp
 
+def correct_date_time(value: str):
+    try:
+        return datetime.strptime(value, '%Y-%m-%d %H:%M:%S')
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Expected format: YYYY-MM-DD HH:MM:SS")
+
+# Function to get sensory data
 def get_sensory_data(sensor_type, order_by=None, start_date=None, end_date=None):
-    valid_sensory_type = ["temperature", "light", "humidity"]
-    if sensor_type not in valid_sensory_type:
-        raise HTTPException(status_code=404, detail= "data cannot be found")
-    query = f"select * FROM {sensor_type}"
+    valid_sensory_types = ["temperature", "light", "humidity"]
     
+    if sensor_type not in valid_sensory_types:
+        raise HTTPException(status_code=404, detail="Sensor type not found")
+    
+    query = f"SELECT * FROM {sensor_type}"
     parameters = []
+    
     if start_date:
+        start_date = correct_date_time(start_date)
         query += " WHERE timestamp >= %s"
         parameters.append(start_date)
+    
     if end_date:
+        end_date =correct_date_time(end_date)
         query += " AND timestamp <= %s" if start_date else " WHERE timestamp <= %s"
         parameters.append(end_date)
+    
     if order_by:
         if order_by == "value":
             query += " ORDER BY temp_value" if sensor_type == "temperature" else " ORDER BY lite_val" if sensor_type == "light" else " ORDER BY humidity_value"
         elif order_by == "timestamp":
             query += " ORDER BY timestamp"
     
-    cursor.execute(query, tuple(parameters)) 
+    cursor.execute(query, tuple(parameters))
     result = cursor.fetchall()
     return result
+
 @app.get("/api/{sensor_type}")
 async def get_all_data(sensor_type: str, order_by: str = Query(None, alias="order-by"), 
                        start_date: str = Query(None), end_date: str = Query(None)):
@@ -52,15 +69,17 @@ async def put_data(sensor_type: str, sensor_data: SensorData):
         raise HTTPException(status_code=404, detail="Sensor not found")
     
     try:
+        timestamp = sensor_data.timestamp or datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        
         if sensor_type == "temperature":
             query = "INSERT INTO temperature (timestamp, temp_value) VALUES (%s, %s)"
-            values = (sensor_data.timestamp, sensor_data.value)
+            values = (timestamp, sensor_data.value)
         elif sensor_type == "light":
             query = "INSERT INTO light (timestamp, lite_val) VALUES (%s, %s)"
-            values = (sensor_data.timestamp, sensor_data.value)
+            values = (timestamp, sensor_data.value)
         elif sensor_type == "humidity":
             query = "INSERT INTO humidity (timestamp, humidity_value) VALUES (%s, %s)"
-            values = (sensor_data.timestamp, sensor_data.value)
+            values = (timestamp, sensor_data.value)
         
         cursor.execute(query, values)
         data_base.commit()
@@ -97,7 +116,6 @@ async def update_data(sensor_type: str, id: int, sensor_data: SensorData):
         raise HTTPException(status_code=404, detail="Sensor type not found")
     
     try:
-        # Build the update query
         query = f"UPDATE {sensor_type} SET "
         values = []
         
@@ -158,4 +176,4 @@ async def get_count(sensor_type: str):
         raise HTTPException(status_code=500, detail=f"Database error: {err}")
 
 if __name__ == "__main__":
-   uvicorn.run(app="app.main:app", host="0.0.0.0", port=6543, reload=True)
+    uvicorn.run(app="app.main:app", host="0.0.0.0", port=6543, reload=True)
