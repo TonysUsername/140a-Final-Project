@@ -87,21 +87,21 @@ def retrieve_data():
             INSERT INTO temperature (timestamp, temp_value)
             VALUES (%s, %s)
         """
-        cursor.executemany(temp_query, temperature_data[['timestamp', 'temp_value']].values.tolist())
+        cursor.executemany(temp_query, temperature_data[['timestamp', 'value']].values.tolist())
 
         # Insert light data into the database
         light_query = """
             INSERT INTO light (timestamp, lite_val)
             VALUES (%s, %s)
         """
-        cursor.executemany(light_query, light_data[['timestamp', 'lite_val']].values.tolist())
+        cursor.executemany(light_query, light_data[['timestamp', 'value']].values.tolist())
 
         # Insert humidity data into the database
         humin_query = """
             INSERT INTO humidity (timestamp, humidity_value)
             VALUES (%s, %s)
         """
-        cursor.executemany(humin_query, humidity_data[['timestamp', 'humidity_value']].values.tolist())
+        cursor.executemany(humin_query, humidity_data[['timestamp', 'value']].values.tolist())
 
         # Commit the changes to the database
         data_base.commit()
