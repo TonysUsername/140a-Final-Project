@@ -72,40 +72,42 @@ def retrieve_data():
     humidity_csv = "./sample/humidity.csv"
     light_csv = "./sample/light.csv"
 
-    # Load data from CSV files
     try:
+        # Load data from CSV files using pandas
         temperature_data = pd.read_csv(temperature_csv)
         humidity_data = pd.read_csv(humidity_csv)
         light_data = pd.read_csv(light_csv)
     except FileNotFoundError as err:
-        print(f"Error reading files: {err}")
+        print(f"Error: CSV file not found: {err}")
         return
-
-    # Insert the data into the database
+  
     try:
+        # Insert temperature data into the database
         temp_query = """
             INSERT INTO temperature (timestamp, temp_value)
             VALUES (%s, %s)
         """
-        cursor.executemany(temp_query, temperature_data.values.tolist())
+        cursor.executemany(temp_query, temperature_data[['timestamp', 'temp_value']].values.tolist())
 
+        # Insert light data into the database
         light_query = """
             INSERT INTO light (timestamp, lite_val)
             VALUES (%s, %s)
         """
-        cursor.executemany(light_query, light_data.values.tolist())
+        cursor.executemany(light_query, light_data[['timestamp', 'lite_val']].values.tolist())
 
+        # Insert humidity data into the database
         humin_query = """
             INSERT INTO humidity (timestamp, humidity_value)
             VALUES (%s, %s)
         """
-        cursor.executemany(humin_query, humidity_data.values.tolist())
-        
-        data_base.commit()  # Save the changes
+        cursor.executemany(humin_query, humidity_data[['timestamp', 'humidity_value']].values.tolist())
+
+        # Commit the changes to the database
+        data_base.commit()
         print("Data loaded into tables successfully.")
     except mysql.Error as err:
-        print(f"Error inserting data: {err}")
-
+        print(f"Error inserting data into database: {err}")
 # Populate the database by creating tables and retrieving data
 def populate_database():
     our_tables()  # Ensure tables are created
