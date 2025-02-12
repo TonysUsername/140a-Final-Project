@@ -1,17 +1,45 @@
+import os
 import mysql.connector as mysql
 import uvicorn
 from fastapi import FastAPI, HTTPException, Query
-from app.database import populate_database, cursor, data_base
 from pydantic import BaseModel
 from datetime import datetime
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+# Database connection
+db_host = os.getenv("MYSQL_HOST")
+db_user = os.getenv("MYSQL_USER")
+db_database = os.getenv("MYSQL_DATABASE")
+db_password = os.getenv("MYSQL_PASSWORD")
+
+data_base = mysql.connect(
+    host=db_host,
+    user=db_user,
+    password=db_password,
+    database=db_database
+)
+
+cursor = data_base.cursor()
+
+def create_tables():
+    # Create tables (same code as before)
+    pass
+
+def load_data_from_csv():
+    # Load data from CSV files (same code as before)
+    pass
+
+def populate_database():
+    create_tables()
+    load_data_from_csv()
+    print("Database populated.")
 
 # Initialize FastAPI app
 app = FastAPI()
 
-def on_startup():
-    populate_database()
-
-# Define the request model for inserting and updating data
 class SensorData(BaseModel):
     value: float
     unit: str
@@ -66,8 +94,6 @@ async def get_all_data(sensor_type: str,
     except HTTPException as e:
         raise e
 
-
-
 # Run the app
 if __name__ == "__main__":
-    uvicorn.run(app="app.main:app", host="0.0.0.0", port=6543, reload=True)
+    uvicorn.run(app="main:app", host="0.0.0.0", port=6543, reload=True)
