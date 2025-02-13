@@ -15,6 +15,7 @@ async def lifespan(app: FastAPI):
     populate_database()
     yield
     # Shutdown
+
 app = FastAPI(lifespan=lifespan)
 
 
@@ -34,9 +35,8 @@ class SensorData(BaseModel):
     value: float
     unit: str
     timestamp: str = None
+
 # Helper function to validate date format
-
-
 def correct_date_time(value: str):
     try:
         return datetime.strptime(value, '%Y-%m-%d %H:%M:%S')
@@ -45,8 +45,6 @@ def correct_date_time(value: str):
             status_code=400, detail="Invalid date format. Expected format: YYYY-MM-DD HH:MM:SS")
 
 # Function to get sensory data with filtering and sorting
-
-
 def get_sensory_data(sensor_type, order_by=None, start_date=None, end_date=None):
     valid_sensory_types = ["temperature", "light", "humidity"]
 
@@ -71,8 +69,13 @@ def get_sensory_data(sensor_type, order_by=None, start_date=None, end_date=None)
             query += " ORDER BY value"
         elif order_by == "timestamp":
             query += " ORDER BY timestamp"
+
+    # Use dictionary=True to ensure the result is a dictionary
+    cursor = data_base.cursor(dictionary=True)  # This ensures results are dictionaries
     cursor.execute(query, tuple(parameters))
     result = cursor.fetchall()
+    cursor.close()
+    
     return result
 
 
@@ -97,8 +100,10 @@ async def get_count(sensor_type: str):
         raise HTTPException(status_code=404, detail="Sensor not found")
 
     query = f"SELECT COUNT(*) FROM {sensor_type}"
+    cursor = data_base.cursor(dictionary=True)  # Ensure dictionary results
     cursor.execute(query)
     result = cursor.fetchone()
+    cursor.close()
     return result[0]
 
 
@@ -111,9 +116,11 @@ def put_data(sensor_type: str, sensor_data: SensorData):
     try:
         query = f"INSERT INTO {sensor_type} (timestamp, value) VALUES (%s, %s)"
         values = (sensor_data.timestamp, sensor_data.value)
+        cursor = data_base.cursor(dictionary=True)  # Ensure dictionary results
         cursor.execute(query, values)
         data_base.commit()
         new_id = cursor.lastrowid
+        cursor.close()
         return {"id": new_id}
     except mysql.Error as err:
         raise HTTPException(status_code=500, detail=f"Database error: {err}")
@@ -126,8 +133,10 @@ async def get_data_id(sensor_type: str, id: int):
     if sensor_type not in valid_sensor_types:
         raise HTTPException(status_code=404, detail="Sensor not found")
     query = f"SELECT * FROM {sensor_type} WHERE id = %s"
+    cursor = data_base.cursor(dictionary=True)  # Ensure dictionary results
     cursor.execute(query, (id,))
     result = cursor.fetchone()
+    cursor.close()
 
     if result is None:
         raise HTTPException(status_code=404, detail="Data not found")
@@ -136,8 +145,6 @@ async def get_data_id(sensor_type: str, id: int):
 
 
 # Route to update data by ID for a given sensor type
-
-
 @app.put("/api/{sensor_type}/{id}")
 async def update_data(sensor_type: str, id: int, sensor_data: SensorData):
     valid_sensor_types = ["temperature", "light", "humidity"]
@@ -164,16 +171,17 @@ async def update_data(sensor_type: str, id: int, sensor_data: SensorData):
         query += " WHERE id = %s"
         values.append(id)
 
+        cursor = data_base.cursor(dictionary=True)  # Ensure dictionary results
         cursor.execute(query, tuple(values))
         data_base.commit()
+        cursor.close()
 
         return {"message": "Data updated successfully"}
     except mysql.Error as err:
         raise HTTPException(status_code=500, detail=f"Database error: {err}")
 
+
 # Route to delete data by ID for a given sensor type
-
-
 @app.delete("/api/{sensor_type}/{id}")
 async def delete_data(sensor_type: str, id: int):
     valid_sensor_types = ["temperature", "light", "humidity"]
@@ -182,8 +190,10 @@ async def delete_data(sensor_type: str, id: int):
 
     try:
         query = f"DELETE FROM {sensor_type} WHERE id = %s"
+        cursor = data_base.cursor(dictionary=True)  # Ensure dictionary results
         cursor.execute(query, (id,))
         data_base.commit()
+        cursor.close()
 
         if cursor.rowcount == 0:
             raise HTTPException(status_code=404, detail="Data not found")
