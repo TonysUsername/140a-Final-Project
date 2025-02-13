@@ -41,22 +41,29 @@ class SensorData(BaseModel):
             self.timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         else:
             try:
-                # Ensure that the timestamp provided is in the correct format
-                self.timestamp = datetime.strptime(self.timestamp, "%Y-%m-%d %H:%M:%S").strftime("%Y-%m-%d %H:%M:%S")
+                dt = datetime.fromisoformat(self.timestamp.replace('T', ' '))
+                self.timestamp = dt.strftime("%Y-%m-%d %H:%M:%S")
             except ValueError:
-                raise HTTPException(status_code=400, detail="Invalid date format. Expected format: YYYY-MM-DD HH:MM:SS")
+                try:
+                    dt = datetime.strptime(self.timestamp, "%Y-%m-%d %H:%M:%S")
+                    self.timestamp = dt.strftime("%Y-%m-%d %H:%M:%S")
+                except ValueError:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Invalid date format. Expected format: YYYY-MM-DD HH:MM:SS or YYYY-MM-DDTHH:MM:SS"
+                    )
+
 
 def correct_date_time(value: str):
+   
     try:
-        return datetime.fromisoformat(value)
+        return datetime.strptime(value.replace('T', ' '), '%Y-%m-%d %H:%M:%S')
     except ValueError:
-        try:
-            return datetime.strptime(value, '%Y-%m-%d %H:%M:%S')
-        except ValueError:
-            raise HTTPException(
-                status_code=400, 
-                detail="Invalid date format. Expected format: YYYY-MM-DD HH:MM:SS or YYYY-MM-DDTHH:MM:SS"
-            )
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid date format. Expected format: YYYY-MM-DD HH:MM:SS or YYYY-MM-DDTHH:MM:SS"
+        )
+
 
 def get_sensory_data(sensor_type, order_by=None, start_date=None, end_date=None):
     valid_sensory_types = ["temperature", "light", "humidity"]
@@ -68,14 +75,14 @@ def get_sensory_data(sensor_type, order_by=None, start_date=None, end_date=None)
     parameters = []
 
     if start_date:
-        start_datetime = correct_date_time(start_date)
+        start_date = start_date.replace('T', ' ')
         query += " WHERE timestamp >= %s"
-        parameters.append(start_datetime)
+        parameters.append(start_date)
 
     if end_date:
-        end_datetime = correct_date_time(end_date)
+        end_date = end_date.replace('T', ' ')
         query += " AND timestamp <= %s" if start_date else " WHERE timestamp <= %s"
-        parameters.append(end_datetime)
+        parameters.append(end_date)
 
     if order_by:
         if order_by == "value":
@@ -89,6 +96,22 @@ def get_sensory_data(sensor_type, order_by=None, start_date=None, end_date=None)
     cursor.close()
 
     return result
+
+
+@app.get("/api/{sensor_type}")
+async def get_all_data(
+    sensor_type: str,
+    order_by: str = Query(None, alias="order-by"),
+    start_date: str = Query(None, alias="start-date"),
+    end_date: str = Query(None, alias="end-date")
+):
+    try:
+        retrieved_data = get_sensory_data(
+            sensor_type, order_by, start_date, end_date)
+        return retrieved_data
+    except HTTPException as e:
+        raise e
+
 
 
 # Route to get all data for a given sensor type with optional query parameters
