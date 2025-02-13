@@ -129,7 +129,7 @@ async def get_data_id(sensor_type: str, id: int):
     try:
         query = f"SELECT * FROM {sensor_type} WHERE id = %s"
         cursor.execute(query, (id,))
-        result = cursor.fetchall()
+        result = cursor.fetchone()
 
         if result is None:
             raise HTTPException(status_code=404, detail="Data not found")
