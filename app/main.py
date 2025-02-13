@@ -1,21 +1,18 @@
 from fastapi.responses import HTMLResponse
 import mysql.connector as mysql
 import uvicorn
-from fastapi import FastAPI, HTTPException, Query
-from pydantic import BaseModel
+from fastapi import FastAPI, HTTPException, Query, status, Body
+from pydantic import BaseModel, validator
 from datetime import datetime
 from dotenv import load_dotenv
 from app import database
 from app.database import populate_database, cursor, data_base
 from contextlib import asynccontextmanager
+from datetime import datetime
 
-
-# @asynccontextmanager
 async def lifespan(app: FastAPI):
     populate_database()
     yield
-    # Shutdown
-
 app = FastAPI(lifespan=lifespan)
 
 
@@ -36,38 +33,25 @@ class SensorData(BaseModel):
     unit: str
     timestamp: str = None
 
-    def set_default_timestamp(self):
-        if not self.timestamp:
-            self.timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        else:
-            try:
-                dt = datetime.fromisoformat(self.timestamp.replace('T', ' '))
-                self.timestamp = dt.strftime("%Y-%m-%d %H:%M:%S")
-            except ValueError:
-                try:
-                    dt = datetime.strptime(self.timestamp, "%Y-%m-%d %H:%M:%S")
-                    self.timestamp = dt.strftime("%Y-%m-%d %H:%M:%S")
-                except ValueError:
-                    raise HTTPException(
-                        status_code=400,
-                        detail="Invalid date format. Expected format: YYYY-MM-DD HH:MM:SS or YYYY-MM-DDTHH:MM:SS"
-                    )
-
+    @validator('timestamp')
+    def validate_timestamp(cls, value):
+        if value is None:
+            return datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        try:
+            datetime.strptime(value, '%Y-%m-%d %H:%M:%S')
+            return value
+        except ValueError:
+            raise ValueError("Invalid date format. Expected format: YYYY-MM-DD HH:MM:SS")
 
 def correct_date_time(value: str):
-   
     try:
-        return datetime.strptime(value.replace('T', ' '), '%Y-%m-%d %H:%M:%S')
+        return datetime.strptime(value, '%Y-%m-%d %H:%M:%S')
     except ValueError:
         raise HTTPException(
-            status_code=400,
-            detail="Invalid date format. Expected format: YYYY-MM-DD HH:MM:SS or YYYY-MM-DDTHH:MM:SS"
-        )
-
+            status_code=400, detail="Invalid date format. Expected format: YYYY-MM-DD HH:MM:SS")
 
 def get_sensory_data(sensor_type, order_by=None, start_date=None, end_date=None):
     valid_sensory_types = ["temperature", "light", "humidity"]
-
     if sensor_type not in valid_sensory_types:
         raise HTTPException(status_code=404, detail="Sensor type not found")
 
@@ -75,13 +59,16 @@ def get_sensory_data(sensor_type, order_by=None, start_date=None, end_date=None)
     parameters = []
 
     if start_date:
-        start_date = start_date.replace('T', ' ')
+        start_date = correct_date_time(start_date)
         query += " WHERE timestamp >= %s"
         parameters.append(start_date)
 
     if end_date:
-        end_date = end_date.replace('T', ' ')
-        query += " AND timestamp <= %s" if start_date else " WHERE timestamp <= %s"
+        end_date = correct_date_time(end_date)
+        if start_date:
+            query += " AND timestamp <= %s"
+        else:
+            query += " WHERE timestamp <= %s"
         parameters.append(end_date)
 
     if order_by:
@@ -90,13 +77,23 @@ def get_sensory_data(sensor_type, order_by=None, start_date=None, end_date=None)
         elif order_by == "timestamp":
             query += " ORDER BY timestamp"
 
-    cursor = data_base.cursor(dictionary=True)
     cursor.execute(query, tuple(parameters))
     result = cursor.fetchall()
-    cursor.close()
 
-    return result
+    column_names = [desc[0] for desc in cursor.description]
+    data = [dict(zip(column_names, row)) for row in result]
 
+    for row in data:
+        if 'timestamp' in row:
+            if isinstance(row['timestamp'], datetime):
+                row['timestamp'] = row['timestamp'].strftime('%Y-%m-%d %H:%M:%S')
+            else:
+                try:
+                    datetime.strptime(row['timestamp'], '%Y-%m-%d %H:%M:%S')
+                except ValueError:
+                    raise ValueError("Invalid date format in database. Expected format: YYYY-MM-DD HH:MM:SS")
+
+    return data
 
 @app.get("/api/{sensor_type}")
 async def get_all_data(
@@ -107,22 +104,8 @@ async def get_all_data(
 ):
     try:
         retrieved_data = get_sensory_data(
-            sensor_type, order_by, start_date, end_date)
-        return retrieved_data
-    except HTTPException as e:
-        raise e
-
-
-
-# Route to get all data for a given sensor type with optional query parameters
-@app.get("/api/{sensor_type}")
-async def get_all_data(sensor_type: str,
-                       order_by: str = Query(None, alias="order-by"),
-                       start_date: str = Query(None, alias="start-date"),
-                       end_date: str = Query(None, alias="end-date")):
-    try:
-        retrieved_data = get_sensory_data(
-            sensor_type, order_by, start_date, end_date)
+            sensor_type, order_by, start_date, end_date
+        )
         return retrieved_data
     except HTTPException as e:
         raise e
@@ -139,14 +122,12 @@ async def get_count(sensor_type: str):
     result = cursor.fetchone()
     return result[0]
 
-
 @app.post("/api/{sensor_type}")
 def put_data(sensor_type: str, sensor_data: SensorData):
     valid_sensor_types = ["temperature", "light", "humidity"]
     if sensor_type not in valid_sensor_types:
         raise HTTPException(status_code=404, detail="Sensor not found")
 
-    # Set timestamp to current time if not provided
     if sensor_data.timestamp is None:
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         sensor_data.timestamp = now
@@ -154,7 +135,7 @@ def put_data(sensor_type: str, sensor_data: SensorData):
     try:
         query = f"INSERT INTO {sensor_type} (timestamp, value, unit) VALUES (%s, %s, %s)"
         values = (sensor_data.timestamp, sensor_data.value, sensor_data.unit)
-        cursor = data_base.cursor(dictionary=True)  # Ensure dictionary results
+        cursor = data_base.cursor(dictionary=True)
         cursor.execute(query, values)
         data_base.commit()
         new_id = cursor.lastrowid
@@ -163,15 +144,13 @@ def put_data(sensor_type: str, sensor_data: SensorData):
     except mysql.Error as err:
         raise HTTPException(status_code=500, detail=f"Database error: {err}")
 
-
-# Route to fetch data by ID for a given sensor type
 @app.get("/api/{sensor_type}/{id}")
 async def get_data_id(sensor_type: str, id: int):
     valid_sensor_types = ["temperature", "light", "humidity"]
     if sensor_type not in valid_sensor_types:
         raise HTTPException(status_code=404, detail="Sensor not found")
     query = f"SELECT * FROM {sensor_type} WHERE id = %s"
-    cursor = data_base.cursor(dictionary=True)  # Ensure dictionary results
+    cursor = data_base.cursor(dictionary=True)
     cursor.execute(query, (id,))
     result = cursor.fetchone()
     cursor.close()
@@ -181,8 +160,6 @@ async def get_data_id(sensor_type: str, id: int):
 
     return result
 
-
-# Route to update data by ID for a given sensor type
 @app.put("/api/{sensor_type}/{id}")
 async def update_data(sensor_type: str, id: int, sensor_data: SensorData):
     valid_sensor_types = ["temperature", "light", "humidity"]
@@ -190,7 +167,6 @@ async def update_data(sensor_type: str, id: int, sensor_data: SensorData):
         raise HTTPException(status_code=404, detail="Sensor type not found")
 
     try:
-        # Build the update query
         query = f"UPDATE {sensor_type} SET "
         values = []
 
@@ -209,7 +185,7 @@ async def update_data(sensor_type: str, id: int, sensor_data: SensorData):
         query += " WHERE id = %s"
         values.append(id)
 
-        cursor = data_base.cursor(dictionary=True)  # Ensure dictionary results
+        cursor = data_base.cursor(dictionary=True)
         cursor.execute(query, tuple(values))
         data_base.commit()
         cursor.close()
@@ -217,9 +193,7 @@ async def update_data(sensor_type: str, id: int, sensor_data: SensorData):
         return {"message": "Data updated successfully"}
     except mysql.Error as err:
         raise HTTPException(status_code=500, detail=f"Database error: {err}")
-
-
-# Route to delete data by ID for a given sensor type
+    
 @app.delete("/api/{sensor_type}/{id}")
 async def delete_data(sensor_type: str, id: int):
     valid_sensor_types = ["temperature", "light", "humidity"]
@@ -228,7 +202,7 @@ async def delete_data(sensor_type: str, id: int):
 
     try:
         query = f"DELETE FROM {sensor_type} WHERE id = %s"
-        cursor = data_base.cursor(dictionary=True)  # Ensure dictionary results
+        cursor = data_base.cursor(dictionary=True)
         cursor.execute(query, (id,))
         data_base.commit()
         cursor.close()
@@ -239,7 +213,6 @@ async def delete_data(sensor_type: str, id: int):
         return {"message": "Data deleted successfully"}
     except mysql.Error as err:
         raise HTTPException(status_code=500, detail=f"Database error: {err}")
-
 
 if __name__ == "__main__":
     uvicorn.run(app="app.main:app", host="0.0.0.0", port=6543, reload=True)
