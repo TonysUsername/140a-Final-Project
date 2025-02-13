@@ -117,7 +117,7 @@ def put_data(sensor_type: str, sensor_data: SensorData):
         raise HTTPException(status_code=404, detail="Sensor not found")
 
     try:
-        query = f"INSERT INTO {sensor_type} (timestamp, value, unit) VALUES (%s, %s)"
+        query = f"INSERT INTO {sensor_type} (timestamp, value, unit) VALUES (%s, %s, %s)"
         values = (sensor_data.timestamp, sensor_data.value)
         cursor = data_base.cursor(dictionary=True)  # Ensure dictionary results
         cursor.execute(query, values)
