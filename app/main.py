@@ -55,8 +55,10 @@ def correct_date_time(value: str):
             status_code=400, detail="Invalid date format. Expected format: YYYY-MM-DD HH:MM:SS")
 
 # Function to get sensory data with filtering and sorting
+
 def get_sensory_data(sensor_type, order_by=None, start_date=None, end_date=None):
     valid_sensory_types = ["temperature", "light", "humidity"]
+
     if sensor_type not in valid_sensory_types:
         raise HTTPException(status_code=404, detail="Sensor type not found")
 
@@ -64,16 +66,13 @@ def get_sensory_data(sensor_type, order_by=None, start_date=None, end_date=None)
     parameters = []
 
     if start_date:
-        start_date = start_date.replace('T', ' ')  # Ensure correct format
-        query += " WHERE timestamp >= STR_TO_DATE(%s, '%%Y-%%m-%%d %%H:%%i:%%s')"
+        start_date = correct_date_time(start_date)
+        query += " WHERE timestamp >= %s"
         parameters.append(start_date)
 
     if end_date:
-        end_date = end_date.replace('T', ' ')  # Ensure correct format
-        if start_date:
-            query += " AND timestamp <= STR_TO_DATE(%s, '%%Y-%%m-%%d %%H:%%i:%%s')"
-        else:
-            query += " WHERE timestamp <= STR_TO_DATE(%s, '%%Y-%%m-%%d %%H:%%i:%%s')"
+        end_date = correct_date_time(end_date)
+        query += " AND timestamp <= %s" if start_date else " WHERE timestamp <= %s"
         parameters.append(end_date)
 
     if order_by:
@@ -82,10 +81,8 @@ def get_sensory_data(sensor_type, order_by=None, start_date=None, end_date=None)
         elif order_by == "timestamp":
             query += " ORDER BY timestamp"
 
-    print(f"Executing query: {query}")
-    print(f"With parameters: {parameters}")
-    
     # Use dictionary=True to ensure the result is a dictionary
+    # This ensures results are dictionaries
     cursor = data_base.cursor(dictionary=True)
     cursor.execute(query, tuple(parameters))
     result = cursor.fetchall()
