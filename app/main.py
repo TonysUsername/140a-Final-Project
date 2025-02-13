@@ -45,65 +45,54 @@ class SensorData(BaseModel):
                 self.timestamp = datetime.strptime(self.timestamp, "%Y-%m-%d %H:%M:%S").strftime("%Y-%m-%d %H:%M:%S")
             except ValueError:
                 raise HTTPException(status_code=400, detail="Invalid date format. Expected format: YYYY-MM-DD HH:MM:SS")
-def correct_date_time(value: str):
-    # Remove the 'T' character if it exists
-    if 'T' in value:
-        value = value.replace('T', ' ')  # Replace 'T' with a space to match the expected format
 
+def correct_date_time(value: str):
+    value = value.replace("T", " ")
     try:
         return datetime.strptime(value, '%Y-%m-%d %H:%M:%S')
     except ValueError:
         raise HTTPException(
             status_code=400, detail="Invalid date format. Expected format: YYYY-MM-DD HH:MM:SS")
 
-
-
 # Function to get sensory data with filtering and sorting
 
-from datetime import datetime
+def get_sensory_data(sensor_type, order_by=None, start_date=None, end_date=None):
+    valid_sensory_types = ["temperature", "light", "humidity"]
 
-@app.get("/api/{sensor_type}")
-d@app.get("/api/{sensor_type}")
-def get_all_sensor_data(
-    sensor_type: str,
-    order_by: Optional[str] = Query(None, alias="order-by"),
-    start_date: Optional[str] = None,
-    end_date: Optional[str] = None
-):
-    """Fetch sensor data with optional filtering and sorting."""
-    if sensor_type not in ["temperature", "humidity", "light"]:
-        raise HTTPException(status_code=404, detail="Invalid sensor type")
+    if sensor_type not in valid_sensory_types:
+        raise HTTPException(status_code=404, detail="Sensor type not found")
 
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    query = f"SELECT * FROM {sensor_type}"
+    parameters = []
 
-    query = f"SELECT * FROM {sensor_type} WHERE 1=1"
-    params = []
-
-    # Add start_date filter if provided
     if start_date:
-        query += " AND timestamp >= STR_TO_DATE(%s, '%%Y-%%m-%%d %%H:%%i:%%s')"
-        params.append(start_date)
+        # Ensure correct date format handling
+        start_date = correct_date_time(start_date)
+        query += " WHERE timestamp >= %s"
+        parameters.append(start_date)
 
-    # Add end_date filter if provided
     if end_date:
-        query += " AND timestamp <= STR_TO_DATE(%s, '%%Y-%%m-%%d %%H:%%i:%%s')"
-        params.append(end_date)
+        # Use "AND" if start_date already exists, else use WHERE
+        end_date = correct_date_time(end_date)
+        if start_date:
+            query += " AND timestamp <= %s"
+        else:
+            query += " WHERE timestamp <= %s"
+        parameters.append(end_date)
 
-    # Add order_by filter if provided
-    if order_by in ["value", "timestamp"]:
-        query += f" ORDER BY {order_by} ASC"
+    if order_by:
+        if order_by == "value":
+            query += " ORDER BY value"
+        elif order_by == "timestamp":
+            query += " ORDER BY timestamp"
 
-    # Execute the query
-    cursor.execute(query, params)
-    data = cursor.fetchall()
-
+    # Use dictionary=True to ensure the result is a dictionary
+    cursor = data_base.cursor(dictionary=True)
+    cursor.execute(query, tuple(parameters))
+    result = cursor.fetchall()
     cursor.close()
-    conn.close()
 
-    return data
-
-
+    return result
 
 
 # Route to get all data for a given sensor type with optional query parameters
