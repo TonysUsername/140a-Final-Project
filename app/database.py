@@ -19,6 +19,7 @@ data_base = mysql.connect(
 
 cursor = data_base.cursor()
 
+
 def create_tables():
     create_temp_table = """
     CREATE TABLE IF NOT EXISTS temperature(
@@ -56,6 +57,7 @@ def create_tables():
     except mysql.Error as err:
         print(f"Error creating tables: {err}")
 
+
 def load_data_from_csv():
     try:
         temperature_data = pd.read_csv("./sample/temperature.csv")
@@ -71,7 +73,7 @@ def load_data_from_csv():
         'humidity': ("INSERT INTO humidity (timestamp, value, unit) VALUES (%s, %s, %s)",
                      humidity_data[['timestamp', 'value']].assign(unit='Percentage').values.tolist()),
         'light': ("INSERT INTO light (timestamp, value, unit) VALUES (%s, %s, %s)",
-                   light_data[['timestamp', 'value']].assign(unit='Lux').values.tolist())
+                  light_data[['timestamp', 'value']].assign(unit='Lux').values.tolist())
     }
 
     try:
@@ -81,6 +83,7 @@ def load_data_from_csv():
         print("Data loaded successfully.")
     except mysql.Error as err:
         print(f"Error inserting data: {err}")
+
 
 def populate_database():
     create_tables()
