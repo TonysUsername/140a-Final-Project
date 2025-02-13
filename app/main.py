@@ -134,9 +134,8 @@ async def get_data_id(sensor_type: str, id: int):
         if result is None:
             raise HTTPException(status_code=404, detail="Data not found")
 
-        return result[0]
-    except mysql.Error as err:
-        raise HTTPException(status_code=500, detail=f"Database error: {err}")
+        return result
+
 
 # Route to update data by ID for a given sensor type
 
