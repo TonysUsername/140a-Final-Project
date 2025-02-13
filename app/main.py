@@ -45,13 +45,17 @@ class SensorData(BaseModel):
                 self.timestamp = datetime.strptime(self.timestamp, "%Y-%m-%d %H:%M:%S").strftime("%Y-%m-%d %H:%M:%S")
             except ValueError:
                 raise HTTPException(status_code=400, detail="Invalid date format. Expected format: YYYY-MM-DD HH:MM:SS")
-
 def correct_date_time(value: str):
+    # Remove the 'T' character if it exists
+    if 'T' in value:
+        value = value.replace('T', ' ')  # Replace 'T' with a space to match the expected format
+
     try:
         return datetime.strptime(value, '%Y-%m-%d %H:%M:%S')
     except ValueError:
         raise HTTPException(
             status_code=400, detail="Invalid date format. Expected format: YYYY-MM-DD HH:MM:SS")
+
 
 
 # Function to get sensory data with filtering and sorting
