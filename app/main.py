@@ -67,7 +67,16 @@ def get_sensory_data(sensor_type, order_by=None, start_date=None, end_date=None)
     data_base.close() 
     
     return result
+@app.get("/", response_class = HTMLResponse)
+def server() -> HTMLResponse:
+    with open("app/index.html") as html_file:
+        return HTMLResponse(content = html_file.read())
 
+@app.get("/dashboard", response_class=HTMLResponse)
+def dashboard():
+    with open("app/dashboard.html") as html_file:
+        return HTMLResponse(content = html_file.read())
+    
 # Route to get all data for a given sensor type with optional query parameters
 @app.get("/api/{sensor_type}")
 async def get_all_data(sensor_type: str, 
