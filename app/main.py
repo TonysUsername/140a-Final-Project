@@ -94,7 +94,11 @@ async def get_count(sensor_type: str):
     valid_sensor_types = ["temperature", "light", "humidity"]
     if sensor_type not in valid_sensor_types:
         raise HTTPException(status_code=404, detail="Sensor not found")
-
+    
+    query = f"SELECT COUNT(*) FROM {sensor_type}"
+    cursor.execute(query)
+    result = cursor.fetchone()
+    return {"count": result[0]}
 
 if __name__ == "__main__":
     uvicorn.run(app="app.main:app", host="0.0.0.0", port=6543, reload=True)
