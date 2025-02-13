@@ -125,16 +125,14 @@ async def get_data_id(sensor_type: str, id: int):
     valid_sensor_types = ["temperature", "light", "humidity"]
     if sensor_type not in valid_sensor_types:
         raise HTTPException(status_code=404, detail="Sensor not found")
+    query = f"SELECT * FROM {sensor_type} WHERE id = %s"
+    cursor.execute(query, (id,))
+    result = cursor.fetchone()
 
-    try:
-        query = f"SELECT * FROM {sensor_type} WHERE id = %s"
-        cursor.execute(query, (id,))
-        result = cursor.fetchone()
+    if result is None:
+        raise HTTPException(status_code=404, detail="Data not found")
 
-        if result is None:
-            raise HTTPException(status_code=404, detail="Data not found")
-
-        return result
+    return result
 
 
 # Route to update data by ID for a given sensor type
