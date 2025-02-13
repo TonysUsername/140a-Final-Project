@@ -36,8 +36,15 @@ class SensorData(BaseModel):
     unit: str
     timestamp: str = None
 
-# Helper function to validate date format
-
+    def set_default_timestamp(self):
+        if not self.timestamp:
+            self.timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        else:
+            try:
+                # Ensure that the timestamp provided is in the correct format
+                self.timestamp = datetime.strptime(self.timestamp, "%Y-%m-%d %H:%M:%S").strftime("%Y-%m-%d %H:%M:%S")
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid date format. Expected format: YYYY-MM-DD HH:MM:SS")
 
 def correct_date_time(value: str):
     try:
@@ -45,6 +52,7 @@ def correct_date_time(value: str):
     except ValueError:
         raise HTTPException(
             status_code=400, detail="Invalid date format. Expected format: YYYY-MM-DD HH:MM:SS")
+
 
 # Function to get sensory data with filtering and sorting
 
