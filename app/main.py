@@ -124,6 +124,11 @@ def put_data(sensor_type: str, sensor_data: SensorData):
     if sensor_type not in valid_sensor_types:
         raise HTTPException(status_code=404, detail="Sensor not found")
 
+    # Set timestamp to current time if not provided
+    if sensor_data.timestamp is None:
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        sensor_data.timestamp = now
+
     try:
         query = f"INSERT INTO {sensor_type} (timestamp, value, unit) VALUES (%s, %s, %s)"
         values = (sensor_data.timestamp, sensor_data.value, sensor_data.unit)
