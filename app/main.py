@@ -118,7 +118,7 @@ def put_data(sensor_type: str, sensor_data: SensorData):
 
     try:
         query = f"INSERT INTO {sensor_type} (timestamp, value, unit) VALUES (%s, %s, %s)"
-        values = (sensor_data.timestamp, sensor_data.value)
+        values = (sensor_data.timestamp, sensor_data.value, sensor_data.unit)
         cursor = data_base.cursor(dictionary=True)  # Ensure dictionary results
         cursor.execute(query, values)
         data_base.commit()
