@@ -1,4 +1,5 @@
 import os
+from fastapi.responses import HTMLResponse
 import mysql.connector as mysql
 import uvicorn
 from fastapi import FastAPI, HTTPException, Query
@@ -10,6 +11,16 @@ from app.database import populate_database
 # Initialize FastAPI app
 app = FastAPI()
 
+@app.get("/", response_class = HTMLResponse)
+def server() -> HTMLResponse:
+    with open("app/index.html") as html_file:
+        return HTMLResponse(content = html_file.read())
+
+@app.get("/dashboard", response_class=HTMLResponse)
+def dashboard():
+    with open("app/dashboard.html") as html_file:
+        return HTMLResponse(content = html_file.read())
+    
 # Load environment variables
 load_dotenv()
 
@@ -67,16 +78,7 @@ def get_sensory_data(sensor_type, order_by=None, start_date=None, end_date=None)
     data_base.close() 
     
     return result
-@app.get("/", response_class = HTMLResponse)
-def server() -> HTMLResponse:
-    with open("app/index.html") as html_file:
-        return HTMLResponse(content = html_file.read())
-
-@app.get("/dashboard", response_class=HTMLResponse)
-def dashboard():
-    with open("app/dashboard.html") as html_file:
-        return HTMLResponse(content = html_file.read())
-    
+  
 # Route to get all data for a given sensor type with optional query parameters
 @app.get("/api/{sensor_type}")
 async def get_all_data(sensor_type: str, 
