@@ -5,6 +5,7 @@ from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel
 from datetime import datetime
 from dotenv import load_dotenv
+from app import database
 from app.database import populate_database, cursor
 from contextlib import asynccontextmanager
 
@@ -99,6 +100,29 @@ async def get_count(sensor_type: str):
     cursor.execute(query)
     result = cursor.fetchone()
     return result[0]
-
+   
+@app.post("/api/{sensor_type}")
+async def put_data(sensor_type: str, sensor_data: SensorData):
+    valid_sensor_types = ["temperature", "light", "humidity"]
+    if sensor_type not in valid_sensor_types:
+        raise HTTPException(status_code=404, detail="Sensor not found")
+    
+    try:
+        if sensor_type == "temperature":
+            query = "INSERT INTO temperature (timestamp, temp_value) VALUES (%s, %s)"
+            values = (sensor_data.timestamp, sensor_data.value)
+        elif sensor_type == "light":
+            query = "INSERT INTO light (timestamp, lite_val) VALUES (%s, %s)"
+            values = (sensor_data.timestamp, sensor_data.value)
+        elif sensor_type == "humidity":
+            query = "INSERT INTO humidity (timestamp, humidity_value) VALUES (%s, %s)"
+            values = (sensor_data.timestamp, sensor_data.value)
+        
+        cursor.execute(query, values)
+        cursor.connection.commit()
+        new_id = cursor.lastrowid
+        return {"id": new_id}
+    except mysql.Error as err:
+        raise HTTPException(status_code=500, detail=f"Database error: {err}")
 if __name__ == "__main__":
     uvicorn.run(app="app.main:app", host="0.0.0.0", port=6543, reload=True)
