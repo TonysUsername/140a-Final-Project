@@ -109,13 +109,13 @@ async def put_data(sensor_type: str, sensor_data: SensorData):
     
     try:
         if sensor_type == "temperature":
-            query = "INSERT INTO temperature (timestamp, temp_value) VALUES (%s, %s)"
+            query = "INSERT INTO temperature (timestamp, value) VALUES (%s, %s)"
             values = (sensor_data.timestamp, sensor_data.value)
         elif sensor_type == "light":
-            query = "INSERT INTO light (timestamp, lite_val) VALUES (%s, %s)"
+            query = "INSERT INTO light (timestamp, value) VALUES (%s, %s)"
             values = (sensor_data.timestamp, sensor_data.value)
         elif sensor_type == "humidity":
-            query = "INSERT INTO humidity (timestamp, humidity_value) VALUES (%s, %s)"
+            query = "INSERT INTO humidity (timestamp, value) VALUES (%s, %s)"
             values = (sensor_data.timestamp, sensor_data.value)
         
         cursor.execute(query, values)
