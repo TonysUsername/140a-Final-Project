@@ -38,17 +38,13 @@ class SensorData(BaseModel):
 
 # Helper function to validate date format
 
+
 def correct_date_time(value: str):
     try:
-        # Try parsing both formats
         return datetime.strptime(value, '%Y-%m-%d %H:%M:%S')
     except ValueError:
-        try:
-            return datetime.strptime(value, '%Y-%m-%dT%H:%M:%S')  # Handle T separator
-        except ValueError:
-            raise HTTPException(
-                status_code=400, detail="Invalid date format. Expected format: YYYY-MM-DD HH:MM:SS or YYYY-MM-DDTHH:MM:SS")
-
+        raise HTTPException(
+            status_code=400, detail="Invalid date format. Expected format: YYYY-MM-DD HH:MM:SS")
 
 # Function to get sensory data with filtering and sorting
 
