@@ -100,7 +100,6 @@ async def get_count(sensor_type: str):
         raise HTTPException(status_code=404, detail="Sensor not found")
 
     query = f"SELECT COUNT(*) FROM {sensor_type}"
-    cursor = data_base.cursor(dictionary=True)  # Ensure dictionary results
     cursor.execute(query)
     result = cursor.fetchone()
     cursor.close()
