@@ -57,7 +57,6 @@ def correct_date_time(value: str):
 # Function to get sensory data with filtering and sorting
 def get_sensory_data(sensor_type, order_by=None, start_date=None, end_date=None):
     valid_sensory_types = ["temperature", "light", "humidity"]
-
     if sensor_type not in valid_sensory_types:
         raise HTTPException(status_code=404, detail="Sensor type not found")
 
@@ -65,12 +64,12 @@ def get_sensory_data(sensor_type, order_by=None, start_date=None, end_date=None)
     parameters = []
 
     if start_date:
-        # No need for Python date conversion; let SQL handle it
+        start_date = start_date.replace('T', ' ')  # Ensure correct format
         query += " WHERE timestamp >= STR_TO_DATE(%s, '%%Y-%%m-%%d %%H:%%i:%%s')"
         parameters.append(start_date)
 
     if end_date:
-        # Use "AND" if start_date already exists, else use WHERE
+        end_date = end_date.replace('T', ' ')  # Ensure correct format
         if start_date:
             query += " AND timestamp <= STR_TO_DATE(%s, '%%Y-%%m-%%d %%H:%%i:%%s')"
         else:
@@ -83,6 +82,9 @@ def get_sensory_data(sensor_type, order_by=None, start_date=None, end_date=None)
         elif order_by == "timestamp":
             query += " ORDER BY timestamp"
 
+    print(f"Executing query: {query}")
+    print(f"With parameters: {parameters}")
+    
     # Use dictionary=True to ensure the result is a dictionary
     cursor = data_base.cursor(dictionary=True)
     cursor.execute(query, tuple(parameters))
@@ -90,7 +92,6 @@ def get_sensory_data(sensor_type, order_by=None, start_date=None, end_date=None)
     cursor.close()
 
     return result
-
 
 
 # Route to get all data for a given sensor type with optional query parameters
