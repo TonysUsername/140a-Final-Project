@@ -7,6 +7,13 @@ from pydantic import BaseModel
 from datetime import datetime
 from dotenv import load_dotenv
 from app.database import populate_database
+from contextlib import asynccontextmanager
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    populate_database()
+    yield
+    # Shutdown
+    app = FastAPI(lifespan=lifespan)
 
 # Initialize FastAPI app
 app = FastAPI()

@@ -7,6 +7,12 @@ services:
     volumes:
       - ./data:/var/lib/mysql
     env_file: .env
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u$$MYSQL_USER", "-p$$MYSQL_PASSWORD"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   web:
     build: .
@@ -15,5 +21,6 @@ services:
     volumes:
       - ./app:/code/app
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     env_file: .env
