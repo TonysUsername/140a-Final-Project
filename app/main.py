@@ -119,5 +119,78 @@ def put_data(sensor_type: str, sensor_data: SensorData):
         raise HTTPException(status_code=500, detail=f"Database error: {err}")
 
 
+# Route to fetch data by ID for a given sensor type
+@app.get("/api/{sensor_type}/{id}")
+async def get_data_id(sensor_type: str, id: int):
+    valid_sensor_types = ["temperature", "light", "humidity"]
+    if sensor_type not in valid_sensor_types:
+        raise HTTPException(status_code=404, detail="Sensor not found")
+    
+    try:
+        query = f"SELECT * FROM {sensor_type} WHERE id = %s"
+        cursor.execute(query, (id,))
+        result = cursor.fetchone()
+        
+        if result is None:
+            raise HTTPException(status_code=404, detail="Data not found")
+        
+        return result
+    except mysql.Error as err:
+        raise HTTPException(status_code=500, detail=f"Database error: {err}")
+
+# Route to update data by ID for a given sensor type
+@app.put("/api/{sensor_type}/{id}")
+async def update_data(sensor_type: str, id: int, sensor_data: SensorData):
+    valid_sensor_types = ["temperature", "light", "humidity"]
+    if sensor_type not in valid_sensor_types:
+        raise HTTPException(status_code=404, detail="Sensor type not found")
+    
+    try:
+        # Build the update query
+        query = f"UPDATE {sensor_type} SET "
+        values = []
+        
+        if sensor_data.value is not None:
+            query += "value = %s"
+            values.append(sensor_data.value)
+        
+        if sensor_data.unit is not None:
+            query += ", unit = %s"
+            values.append(sensor_data.unit)
+        
+        if sensor_data.timestamp is not None:
+            query += ", timestamp = %s"
+            values.append(sensor_data.timestamp)
+        
+        query += " WHERE id = %s"
+        values.append(id)
+        
+        cursor.execute(query, tuple(values))
+        data_base.commit()
+        
+        return {"message": "Data updated successfully"}
+    except mysql.Error as err:
+        raise HTTPException(status_code=500, detail=f"Database error: {err}")
+
+# Route to delete data by ID for a given sensor type
+@app.delete("/api/{sensor_type}/{id}")
+async def delete_data(sensor_type: str, id: int):
+    valid_sensor_types = ["temperature", "light", "humidity"]
+    if sensor_type not in valid_sensor_types:
+        raise HTTPException(status_code=404, detail="Sensor not found")
+    
+    try:
+        query = f"DELETE FROM {sensor_type} WHERE id = %s"
+        cursor.execute(query, (id,))
+        data_base.commit()
+        
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Data not found")
+        
+        return {"message": "Data deleted successfully"}
+    except mysql.Error as err:
+        raise HTTPException(status_code=500, detail=f"Database error: {err}")
+
+
 if __name__ == "__main__":
     uvicorn.run(app="app.main:app", host="0.0.0.0", port=6543, reload=True)
