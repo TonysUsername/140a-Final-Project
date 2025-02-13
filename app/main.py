@@ -37,6 +37,8 @@ class SensorData(BaseModel):
     timestamp: str = None
 
 # Helper function to validate date format
+
+
 def correct_date_time(value: str):
     try:
         return datetime.strptime(value, '%Y-%m-%d %H:%M:%S')
@@ -45,6 +47,8 @@ def correct_date_time(value: str):
             status_code=400, detail="Invalid date format. Expected format: YYYY-MM-DD HH:MM:SS")
 
 # Function to get sensory data with filtering and sorting
+
+
 def get_sensory_data(sensor_type, order_by=None, start_date=None, end_date=None):
     valid_sensory_types = ["temperature", "light", "humidity"]
 
@@ -71,11 +75,12 @@ def get_sensory_data(sensor_type, order_by=None, start_date=None, end_date=None)
             query += " ORDER BY timestamp"
 
     # Use dictionary=True to ensure the result is a dictionary
-    cursor = data_base.cursor(dictionary=True)  # This ensures results are dictionaries
+    # This ensures results are dictionaries
+    cursor = data_base.cursor(dictionary=True)
     cursor.execute(query, tuple(parameters))
     result = cursor.fetchall()
     cursor.close()
-    
+
     return result
 
 
@@ -102,7 +107,6 @@ async def get_count(sensor_type: str):
     query = f"SELECT COUNT(*) FROM {sensor_type}"
     cursor.execute(query)
     result = cursor.fetchone()
-    cursor.close()
     return result[0]
 
 
@@ -113,7 +117,7 @@ def put_data(sensor_type: str, sensor_data: SensorData):
         raise HTTPException(status_code=404, detail="Sensor not found")
 
     try:
-        query = f"INSERT INTO {sensor_type} (timestamp, value) VALUES (%s, %s)"
+        query = f"INSERT INTO {sensor_type} (timestamp, value, unit) VALUES (%s, %s)"
         values = (sensor_data.timestamp, sensor_data.value)
         cursor = data_base.cursor(dictionary=True)  # Ensure dictionary results
         cursor.execute(query, values)
