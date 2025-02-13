@@ -47,14 +47,16 @@ class SensorData(BaseModel):
                 raise HTTPException(status_code=400, detail="Invalid date format. Expected format: YYYY-MM-DD HH:MM:SS")
 
 def correct_date_time(value: str):
-    value = value.replace("T", " ")
     try:
-        return datetime.strptime(value, '%Y-%m-%d %H:%M:%S')
+        return datetime.fromisoformat(value)
     except ValueError:
-        raise HTTPException(
-            status_code=400, detail="Invalid date format. Expected format: YYYY-MM-DD HH:MM:SS")
-
-# Function to get sensory data with filtering and sorting
+        try:
+            return datetime.strptime(value, '%Y-%m-%d %H:%M:%S')
+        except ValueError:
+            raise HTTPException(
+                status_code=400, 
+                detail="Invalid date format. Expected format: YYYY-MM-DD HH:MM:SS or YYYY-MM-DDTHH:MM:SS"
+            )
 
 def get_sensory_data(sensor_type, order_by=None, start_date=None, end_date=None):
     valid_sensory_types = ["temperature", "light", "humidity"]
@@ -66,14 +68,14 @@ def get_sensory_data(sensor_type, order_by=None, start_date=None, end_date=None)
     parameters = []
 
     if start_date:
-        start_date = correct_date_time(start_date)
+        start_datetime = correct_date_time(start_date)
         query += " WHERE timestamp >= %s"
-        parameters.append(start_date)
+        parameters.append(start_datetime)
 
     if end_date:
-        end_date = correct_date_time(end_date)
+        end_datetime = correct_date_time(end_date)
         query += " AND timestamp <= %s" if start_date else " WHERE timestamp <= %s"
-        parameters.append(end_date)
+        parameters.append(end_datetime)
 
     if order_by:
         if order_by == "value":
@@ -81,8 +83,6 @@ def get_sensory_data(sensor_type, order_by=None, start_date=None, end_date=None)
         elif order_by == "timestamp":
             query += " ORDER BY timestamp"
 
-    # Use dictionary=True to ensure the result is a dictionary
-    # This ensures results are dictionaries
     cursor = data_base.cursor(dictionary=True)
     cursor.execute(query, tuple(parameters))
     result = cursor.fetchall()
