@@ -67,17 +67,17 @@ def get_sensory_data(sensor_type, order_by=None, start_date=None, end_date=None)
     if sensor_type not in valid_sensory_types:
         raise HTTPException(status_code=404, detail="Sensor type not found")
 
-    query = f"SELECT * FROM {sensor_type}"
+    query = f"SELECT * FROM {sensor_type} WHERE 1=1"
     parameters = []
 
+    # Convert start_date using STR_TO_DATE in the SQL query
     if start_date:
-        start_date = correct_date_time(start_date)
-        query += " WHERE timestamp >= %s"
+        query += " AND timestamp >= STR_TO_DATE(%s, '%%Y-%%m-%%d %%H:%%i:%%s')"
         parameters.append(start_date)
 
+    # Convert end_date using STR_TO_DATE in the SQL query
     if end_date:
-        end_date = correct_date_time(end_date)
-        query += " AND timestamp <= %s" if start_date else " WHERE timestamp <= %s"
+        query += " AND timestamp <= STR_TO_DATE(%s, '%%Y-%%m-%%d %%H:%%i:%%s')"
         parameters.append(end_date)
 
     if order_by:
@@ -86,14 +86,13 @@ def get_sensory_data(sensor_type, order_by=None, start_date=None, end_date=None)
         elif order_by == "timestamp":
             query += " ORDER BY timestamp"
 
-    # Use dictionary=True to ensure the result is a dictionary
-    # This ensures results are dictionaries
     cursor = data_base.cursor(dictionary=True)
     cursor.execute(query, tuple(parameters))
     result = cursor.fetchall()
     cursor.close()
 
     return result
+
 
 
 # Route to get all data for a given sensor type with optional query parameters
