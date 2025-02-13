@@ -34,9 +34,9 @@ class SensorData(BaseModel):
     value: float
     unit: str
     timestamp: str = None
+
+
 # Helper function to validate date format
-
-
 def correct_date_time(value: str):
     try:
         return datetime.strptime(value, '%Y-%m-%d %H:%M:%S')
@@ -45,8 +45,6 @@ def correct_date_time(value: str):
             status_code=400, detail="Invalid date format. Expected format: YYYY-MM-DD HH:MM:SS")
 
 # Function to get sensory data with filtering and sorting
-
-
 def get_sensory_data(sensor_type, order_by=None, start_date=None, end_date=None):
     valid_sensory_types = ["temperature", "light", "humidity"]
 
@@ -85,7 +83,7 @@ async def get_all_data(sensor_type: str,
     try:
         retrieved_data = get_sensory_data(
             sensor_type, order_by, start_date, end_date)
-        return retrieved_data
+        return {"data": retrieved_data}  # Returning the data inside a 'data' key
     except HTTPException as e:
         raise e
 
@@ -99,7 +97,7 @@ async def get_count(sensor_type: str):
     query = f"SELECT COUNT(*) FROM {sensor_type}"
     cursor.execute(query)
     result = cursor.fetchone()
-    return result[0]
+    return {"count": result[0]}  # Returning the count inside a 'count' key
 
 
 @app.post("/api/{sensor_type}")
@@ -110,11 +108,11 @@ def put_data(sensor_type: str, sensor_data: SensorData):
 
     try:
         query = f"INSERT INTO {sensor_type} (timestamp, value) VALUES (%s, %s)"
-        values = (sensor_data.timestamp, sensor_data.value)
+        values = (sensor_data.timestamp if sensor_data.timestamp else datetime.now(), sensor_data.value)
         cursor.execute(query, values)
         data_base.commit()
         new_id = cursor.lastrowid
-        return {"id": new_id}
+        return {"id": new_id}  # Returning the new ID in a dictionary
     except mysql.Error as err:
         raise HTTPException(status_code=500, detail=f"Database error: {err}")
 
@@ -132,12 +130,10 @@ async def get_data_id(sensor_type: str, id: int):
     if result is None:
         raise HTTPException(status_code=404, detail="Data not found")
 
-    return result
+    return {"data": result}  # Wrapping result in 'data'
 
 
 # Route to update data by ID for a given sensor type
-
-
 @app.put("/api/{sensor_type}/{id}")
 async def update_data(sensor_type: str, id: int, sensor_data: SensorData):
     valid_sensor_types = ["temperature", "light", "humidity"]
@@ -171,9 +167,8 @@ async def update_data(sensor_type: str, id: int, sensor_data: SensorData):
     except mysql.Error as err:
         raise HTTPException(status_code=500, detail=f"Database error: {err}")
 
+
 # Route to delete data by ID for a given sensor type
-
-
 @app.delete("/api/{sensor_type}/{id}")
 async def delete_data(sensor_type: str, id: int):
     valid_sensor_types = ["temperature", "light", "humidity"]
