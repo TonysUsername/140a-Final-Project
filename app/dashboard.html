@@ -1,51 +1,72 @@
 <!DOCTYPE html>
 <html>
-<script
-src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.js">
-</script>
-    <head>
-        <title> Data Visualization</title>
-    </head>
+<head>
+    <title>Multiple Line Charts</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.js"></script>
+</head>
+<body>
 
-    <body>
-        <canvas id="myChart" style="width:100%;max-width:600px"></canvas>
-        <script>
-            const xValues = [50,60,70,80,90,100,110,120,130,140,150];
-            const yValues = [7,8,8,9,9,9,10,11,14,14,15];
-            
-            new Chart("myChart", {
-              type: "line",
-              data: {
-                labels: xValues,
-                datasets: [{
-                  fill: false,
-                  lineTension: 0,
-                  backgroundColor: "rgba(0,0,255,1.0)",
-                  borderColor: "rgba(0,0,255,0.1)",
-                  data: yValues
-                }]
-              },
-              options: {
-                legend: {
-                    display: true
+    <h2>Line Graph 1</h2>
+    <canvas id="lineChart1" style="width:100%;max-width:600px"></canvas>
+
+    <h2>Line Graph 2</h2>
+    <canvas id="lineChart2" style="width:100%;max-width:600px"></canvas>
+
+    <h2>Line Graph 3</h2>
+    <canvas id="lineChart3" style="width:100%;max-width:600px"></canvas>
+
+    <script>
+        function createLineChart(canvasId, xValues, yValues, label, color) {
+            new Chart(document.getElementById(canvasId), {
+                type: "line",
+                data: {
+                    labels: xValues,
+                    datasets: [{
+                        label: label,
+                        fill: false,
+                        lineTension: 0.2,
+                        backgroundColor: color,
+                        borderColor: color,
+                        data: yValues
+                    }]
                 },
-                scales: {
-                  yAxes: [{ticks: {min: 6, max:16}}],
-
-                title: { 
-                    display: true,
-                    text: 'Cool Graph',
-                    color: 'blue'
-                },    
-                
+                options: {
+                    legend: { display: true },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Categories'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Values'
+                            },
+                            ticks: {
+                                min: Math.min(...yValues) - 2,
+                                max: Math.max(...yValues) + 2
+                            }
+                        }
+                    }
                 }
-              }
             });
-            </script>
-        
-        <canvas id="myChart" style="width:100%;max-width:600px"></canvas>
+        }
 
-    </body>
-    
+        // Data for the charts
+        const xValues = [50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150];
+
+        const yValues1 = [7, 8, 8, 9, 9, 9, 10, 11, 14, 14, 15]; // Dataset 1
+        const yValues2 = [10, 12, 9, 8, 15, 17, 14, 13, 16, 18, 20]; // Dataset 2
+        const yValues3 = [5, 7, 6, 9, 11, 10, 12, 14, 15, 17, 19]; // Dataset 3
+
+        // Create charts
+        createLineChart("lineChart1", xValues, yValues1, "Dataset 1", "blue");
+        createLineChart("lineChart2", xValues, yValues2, "Dataset 2", "red");
+        createLineChart("lineChart3", xValues, yValues3, "Dataset 3", "green");
+
+    </script>
+
+</body>
 </html>
-
