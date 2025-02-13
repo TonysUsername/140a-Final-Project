@@ -41,13 +41,16 @@ class SensorData(BaseModel):
 
 def correct_date_time(value: str):
     try:
+        # Try parsing both formats
         return datetime.strptime(value, '%Y-%m-%d %H:%M:%S')
     except ValueError:
-        raise HTTPException(
-            status_code=400, detail="Invalid date format. Expected format: YYYY-MM-DD HH:MM:SS")
+        try:
+            return datetime.strptime(value, '%Y-%m-%dT%H:%M:%S')  # Handle T separator
+        except ValueError:
+            raise HTTPException(
+                status_code=400, detail="Invalid date format. Expected format: YYYY-MM-DD HH:MM:SS or YYYY-MM-DDTHH:MM:SS")
 
 # Function to get sensory data with filtering and sorting
-
 
 def get_sensory_data(sensor_type, order_by=None, start_date=None, end_date=None):
     valid_sensory_types = ["temperature", "light", "humidity"]
@@ -68,20 +71,21 @@ def get_sensory_data(sensor_type, order_by=None, start_date=None, end_date=None)
         query += " AND timestamp <= %s" if start_date else " WHERE timestamp <= %s"
         parameters.append(end_date)
 
+    # Handle ordering by value or timestamp
     if order_by:
         if order_by == "value":
             query += " ORDER BY value"
         elif order_by == "timestamp":
             query += " ORDER BY timestamp"
 
-    # Use dictionary=True to ensure the result is a dictionary
-    # This ensures results are dictionaries
-    cursor = data_base.cursor(dictionary=True)
     cursor.execute(query, tuple(parameters))
     result = cursor.fetchall()
-    cursor.close()
 
+    # Filter out rows with None timestamps if necessary
+    result = [row for row in result if row['timestamp'] is not None]
+    
     return result
+
 
 
 # Route to get all data for a given sensor type with optional query parameters
