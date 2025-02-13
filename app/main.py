@@ -55,7 +55,6 @@ def correct_date_time(value: str):
             status_code=400, detail="Invalid date format. Expected format: YYYY-MM-DD HH:MM:SS")
 
 # Function to get sensory data with filtering and sorting
-
 def get_sensory_data(sensor_type, order_by=None, start_date=None, end_date=None):
     valid_sensory_types = ["temperature", "light", "humidity"]
 
@@ -66,18 +65,16 @@ def get_sensory_data(sensor_type, order_by=None, start_date=None, end_date=None)
     parameters = []
 
     if start_date:
-        # Ensure correct date format handling
-        start_date = correct_date_time(start_date)
-        query += " WHERE timestamp >= %s"
+        # No need for Python date conversion; let SQL handle it
+        query += " WHERE timestamp >= STR_TO_DATE(%s, '%%Y-%%m-%%d %%H:%%i:%%s')"
         parameters.append(start_date)
 
     if end_date:
         # Use "AND" if start_date already exists, else use WHERE
-        end_date = correct_date_time(end_date)
         if start_date:
-            query += " AND timestamp <= %s"
+            query += " AND timestamp <= STR_TO_DATE(%s, '%%Y-%%m-%%d %%H:%%i:%%s')"
         else:
-            query += " WHERE timestamp <= %s"
+            query += " WHERE timestamp <= STR_TO_DATE(%s, '%%Y-%%m-%%d %%H:%%i:%%s')"
         parameters.append(end_date)
 
     if order_by:
@@ -93,6 +90,7 @@ def get_sensory_data(sensor_type, order_by=None, start_date=None, end_date=None)
     cursor.close()
 
     return result
+
 
 
 # Route to get all data for a given sensor type with optional query parameters
