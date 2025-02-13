@@ -63,6 +63,7 @@ def correct_date_time(value: str):
 from datetime import datetime
 
 @app.get("/api/{sensor_type}")
+d@app.get("/api/{sensor_type}")
 def get_all_sensor_data(
     sensor_type: str,
     order_by: Optional[str] = Query(None, alias="order-by"),
@@ -72,48 +73,35 @@ def get_all_sensor_data(
     """Fetch sensor data with optional filtering and sorting."""
     if sensor_type not in ["temperature", "humidity", "light"]:
         raise HTTPException(status_code=404, detail="Invalid sensor type")
-    
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
 
-        query = f"SELECT * FROM {sensor_type} WHERE 1=1"
-        params = []
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
 
-        # Convert start_date to correct format if present
-        if start_date:
-            try:
-                start_date_obj = datetime.strptime(start_date, "%Y-%m-%d %H:%M:%S")
-                formatted_start_date = start_date_obj.strftime("%Y-%m-%d %H:%M:%S")
-                query += " AND timestamp >= STR_TO_DATE(%s, '%%Y-%%m-%%d %%H:%%i:%%s')"
-                params.append(formatted_start_date)
-            except ValueError:
-                raise HTTPException(status_code=400, detail="Invalid start-date format. Use YYYY-MM-DD HH:MM:SS")
+    query = f"SELECT * FROM {sensor_type} WHERE 1=1"
+    params = []
 
-        # Convert end_date to correct format if present
-        if end_date:
-            try:
-                end_date_obj = datetime.strptime(end_date, "%Y-%m-%d %H:%M:%S")
-                formatted_end_date = end_date_obj.strftime("%Y-%m-%d %H:%M:%S")
-                query += " AND timestamp <= STR_TO_DATE(%s, '%%Y-%%m-%%d %%H:%%i:%%s')"
-                params.append(formatted_end_date)
-            except ValueError:
-                raise HTTPException(status_code=400, detail="Invalid end-date format. Use YYYY-MM-DD HH:MM:SS")
+    # Add start_date filter if provided
+    if start_date:
+        query += " AND timestamp >= STR_TO_DATE(%s, '%%Y-%%m-%%d %%H:%%i:%%s')"
+        params.append(start_date)
 
-        # Apply ordering if specified
-        if order_by in ["value", "timestamp"]:
-            query += f" ORDER BY {order_by} ASC"
+    # Add end_date filter if provided
+    if end_date:
+        query += " AND timestamp <= STR_TO_DATE(%s, '%%Y-%%m-%%d %%H:%%i:%%s')"
+        params.append(end_date)
 
-        cursor.execute(query, params)
-        data = cursor.fetchall()
-        
-        cursor.close()
-        conn.close()
+    # Add order_by filter if provided
+    if order_by in ["value", "timestamp"]:
+        query += f" ORDER BY {order_by} ASC"
 
-        return data
+    # Execute the query
+    cursor.execute(query, params)
+    data = cursor.fetchall()
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+    cursor.close()
+    conn.close()
+
+    return data
 
 
 
