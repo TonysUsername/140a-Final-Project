@@ -98,7 +98,7 @@ async def get_count(sensor_type: str):
     query = f"SELECT COUNT(*) FROM {sensor_type}"
     cursor.execute(query)
     result = cursor.fetchone()
-    return {"count": result[0]}
+    return result[0]
 
 if __name__ == "__main__":
     uvicorn.run(app="app.main:app", host="0.0.0.0", port=6543, reload=True)
