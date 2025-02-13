@@ -3,21 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sensor Dashboard</title>
+    <title>Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         canvas {
-            width: 600px;
-            height: 400px;
+            width: 400px;
+            height: 200px;
             margin: 20px;
         }
     </style>
 </head>
 <body>
-    <h1>Sensor Data Dashboard</h1>
-    <canvas id="temperatureChart"></canvas>
-    <canvas id="humidityChart"></canvas>
-    <canvas id="lightChart"></canvas>
+    <h1>Dashboard</h1>
+    <canvas id="temperature_Chart"></canvas>
+    <canvas id="humidity_Chart"></canvas>
+    <canvas id="light_Chart"></canvas>
 
     <script>
         async function fetchData(sensorType) {
@@ -55,9 +55,9 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            renderChart('temperature', 'temperatureChart', 'Temperature Data');
-            renderChart('humidity', 'humidityChart', 'Humidity Data');
-            renderChart('light', 'lightChart', 'Light Data');
+            renderChart('temperature', 'temperature_Chart', 'Temperature Data');
+            renderChart('humidity', 'humidity_Chart', 'Humidity Data');
+            renderChart('light', 'light_Chart', 'Light Data');
         });
     </script>
 </body>
