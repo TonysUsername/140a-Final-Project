@@ -1,72 +1,64 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Multiple Line Charts</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sensor Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        canvas {
+            width: 600px;
+            height: 400px;
+            margin: 20px;
+        }
+    </style>
 </head>
 <body>
-
-    <h2>Line Graph 1</h2>
-    <canvas id="lineChart1" style="width:100%;max-width:600px"></canvas>
-
-    <h2>Line Graph 2</h2>
-    <canvas id="lineChart2" style="width:100%;max-width:600px"></canvas>
-
-    <h2>Line Graph 3</h2>
-    <canvas id="lineChart3" style="width:100%;max-width:600px"></canvas>
+    <h1>Sensor Data Dashboard</h1>
+    <canvas id="temperatureChart"></canvas>
+    <canvas id="humidityChart"></canvas>
+    <canvas id="lightChart"></canvas>
 
     <script>
-        function createLineChart(canvasId, xValues, yValues, label, color) {
-            new Chart(document.getElementById(canvasId), {
-                type: "line",
+        async function fetchData(sensorType) {
+            const response = await fetch(`/api/${sensorType}`);
+            return await response.json();
+        }
+
+        async function renderChart(sensorType, chartId, label) {
+            const data = await fetchData(sensorType);
+            const timestamps = data.map(item => item.timestamp);
+            const values = data.map(item => item.value);
+
+            const ctx = document.getElementById(chartId).getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
                 data: {
-                    labels: xValues,
+                    labels: timestamps,
                     datasets: [{
                         label: label,
+                        data: values,
                         fill: false,
-                        lineTension: 0.2,
-                        backgroundColor: color,
-                        borderColor: color,
-                        data: yValues
+                        borderColor: 'rgba(80, 150, 100, 1)',
+                        tension: 0.1
                     }]
                 },
                 options: {
-                    legend: { display: true },
+                    responsive: true,
+                    plugins: { legend: { display: true } },
                     scales: {
-                        x: {
-                            title: {
-                                display: true,
-                                text: 'Categories'
-                            }
-                        },
-                        y: {
-                            title: {
-                                display: true,
-                                text: 'Values'
-                            },
-                            ticks: {
-                                min: Math.min(...yValues) - 2,
-                                max: Math.max(...yValues) + 2
-                            }
-                        }
+                        x: { title: { display: true, text: 'Timee' } },
+                        y: { title: { display: true, text: 'Sensed Data' } }
                     }
                 }
             });
         }
 
-        // Data for the charts
-        const xValues = [50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150];
-
-        const yValues1 = [7, 8, 8, 9, 9, 9, 10, 11, 14, 14, 15]; // Dataset 1
-        const yValues2 = [10, 12, 9, 8, 15, 17, 14, 13, 16, 18, 20]; // Dataset 2
-        const yValues3 = [5, 7, 6, 9, 11, 10, 12, 14, 15, 17, 19]; // Dataset 3
-
-        // Create charts
-        createLineChart("lineChart1", xValues, yValues1, "Dataset 1", "blue");
-        createLineChart("lineChart2", xValues, yValues2, "Dataset 2", "red");
-        createLineChart("lineChart3", xValues, yValues3, "Dataset 3", "green");
-
+        document.addEventListener('DOMContentLoaded', () => {
+            renderChart('temperature', 'temperatureChart', 'Temperature Data');
+            renderChart('humidity', 'humidityChart', 'Humidity Data');
+            renderChart('light', 'lightChart', 'Light Data');
+        });
     </script>
-
 </body>
 </html>
