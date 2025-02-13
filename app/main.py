@@ -79,6 +79,8 @@ def get_sensory_data(sensor_type, order_by=None, start_date=None, end_date=None)
     cursor = data_base.cursor(dictionary=True)
     cursor.execute(query, tuple(parameters))
     result = cursor.fetchall()
+    cursor.close()
+
     return result
 
 
