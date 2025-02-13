@@ -13,10 +13,7 @@ async def lifespan(app: FastAPI):
     populate_database()
     yield
     # Shutdown
-    app = FastAPI(lifespan=lifespan)
-
-# Initialize FastAPI app
-app = FastAPI()
+app = FastAPI(lifespan=lifespan)
 
 @app.get("/", response_class = HTMLResponse)
 def server() -> HTMLResponse:
@@ -27,15 +24,6 @@ def server() -> HTMLResponse:
 def dashboard():
     with open("app/dashboard.html") as html_file:
         return HTMLResponse(content = html_file.read())
-    
-# Load environment variables
-load_dotenv()
-
-# Database connection details from environment variables
-db_host = os.getenv("MYSQL_HOST")
-db_user = os.getenv("MYSQL_USER")
-db_database = os.getenv("MYSQL_DATABASE")
-db_password = os.getenv("MYSQL_PASSWORD")
 
 # Helper function to validate date format
 def correct_date_time(value: str):
