@@ -27,8 +27,12 @@
 
         async function renderChart(sensorType, chartId, label) {
             const data = await fetchData(sensorType);
-            const timestamps = data.map(item => item.timestamp);
-            const values = data.map(item => item.value);
+            const last10Data = data.slice(-10);
+            
+            const timestamps = last10Data.map(item => item.timestamp);
+            const values = last10Data.map(item => item.value);
+            //const timestamps = data.map(item => item.timestamp);
+            //const values = data.map(item => item.value);
 
             const ctx = document.getElementById(chartId).getContext('2d');
             new Chart(ctx, {
