@@ -5,64 +5,55 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        canvas {
-            width: 400px;
-            height: 200px;
-            margin: 20px;
-        }
-    </style>
+    <link rel="stylesheet" href="/static/dos_amigos.css"> <!-- Fixed static file path -->
 </head>
 <body>
-    <h1>Dashboard</h1>
-    <canvas id="temperature_Chart"></canvas>
-    <canvas id="humidity_Chart"></canvas>
-    <canvas id="light_Chart"></canvas>
+    <!-- Navbar Section -->
+    <nav class="navbar">
+        <ul>
+            <li><a href="/user/dashboard">Dashboard</a></li> <!-- Fixed route -->
+            <li><a href="/user/wardrobe">Wardrobe</a></li> <!-- Fixed route -->
+            <li><a href="/user/profile">Profile</a></li> <!-- Fixed route -->
+        </ul>
+    </nav>
 
-    <script>
-        async function fetchData(sensorType) {
-            const response = await fetch(`/api/${sensorType}`);
-            return await response.json();
-        }
+    <!-- Logout Button Form (Positioned top-right) -->
+    <form action="/logout" method="post" class="logout-container">
+        <button type="submit" class="logout-button">Logout</button>
+    </form>
 
-        async function renderChart(sensorType, chartId, label) {
-            const data = await fetchData(sensorType);
-            const last10Data = data.slice(-10);
-            
-            const timestamps = last10Data.map(item => item.timestamp);
-            const values = last10Data.map(item => item.value);
-            //const timestamps = data.map(item => item.timestamp);
-            //const values = data.map(item => item.value);
+    <!-- Header -->
+    <header>
+        <h1>Dashboard</h1>
+    </header>
 
-            const ctx = document.getElementById(chartId).getContext('2d');
-            new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: timestamps,
-                    datasets: [{
-                        label: label,
-                        data: values,
-                        fill: false,
-                        borderColor: 'rgba(80, 150, 100, 1)',
-                        tension: 0.1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: { legend: { display: true } },
-                    scales: {
-                        x: { title: { display: true, text: 'Timee' } },
-                        y: { title: { display: true, text: 'Sensed Data' } }
-                    }
-                }
-            });
-        }
+    <!-- Main Content -->
+    <main>
+        <div class="dashboard-container">
+            <div class="card">
+                <h2>Temperature</h2>
+                <canvas id="temperature_Chart"></canvas>
+            </div>
+            <div class="card">
+                <h2>Humidity</h2>
+                <canvas id="humidity_Chart"></canvas>
+            </div>
+            <div class="card">
+                <h2>Light Levels</h2>
+                <canvas id="light_Chart"></canvas>
+            </div>
+        </div>
+    </main>
 
-        document.addEventListener('DOMContentLoaded', () => {
-            renderChart('temperature', 'temperature_Chart', 'Temperature Data');
-            renderChart('humidity', 'humidity_Chart', 'Humidity Data');
-            renderChart('light', 'light_Chart', 'Light Data');
-        });
-    </script>
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2025 Dos Amigos</p>
+    </footer>
+
+    <!-- Script for Navbar and Page Interactions -->
+    <script src="/static/dos_amigos.js"></script> <!-- Fixed static file path -->
+    
+    <!-- Dashboard-Specific JS for Data Fetching and Chart Rendering -->
+    <script src="/static/dashboard.js"></script> <!-- Fixed static file path -->
 </body>
 </html>

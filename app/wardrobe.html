@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wardrobe | Digital Wardrobe</title>
+    
+    <link rel="stylesheet" href="/static/dos_amigos.css"> 
+    <script defer src="/static/dos_amigos.js"></script>
+    <script defer src="/static/wardrobe.js"></script>
+</head>
+<body>
+    <!-- Navbar Section -->
+    <nav class="navbar">
+        <ul>
+            <li><a href="/user/dashboard">Dashboard</a></li>
+            <li><a href="/user/wardrobe">Wardrobe</a></li>
+            <li><a href="/user/profile">Profile</a></li>
+        </ul>
+    </nav>
+
+    <!-- Logout Button Form -->
+    <form action="/logout" method="post" class="logout-container">
+        <button type="submit" class="logout-button">Logout</button>
+    </form>
+
+    <!-- Header -->
+    <header>
+        <h1>My Wardrobe 👗👕</h1>
+    </header>
+
+    <!-- Main Content -->
+    <main>
+        <div id="wardrobeContainer" class="wardrobe-grid"></div>
+        <button id="addClothingBtn" class="add-btn">+ Add Item</button>
+        
+        <!-- Weather Recommendation Section -->
+        <div class="recommendation-section">
+            <h2>Get Outfit Recommendation</h2>
+            <div class="weather-inputs">
+                <input type="number" id="temperatureInput" placeholder="Temperature (°C)">
+                <input type="number" id="humidityInput" placeholder="Humidity (%)">
+                <button id="getRecommendationBtn">Get Recommendation</button>
+            </div>
+            <div id="recommendationResult"></div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2025 Dos Amigos</p>
+    </footer>
+
+    <!-- Clothing Modal -->
+    <div id="clothingModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Add Clothing</h2>
+            <input type="text" id="clothingName" placeholder="Clothing Name">
+            
+            <div class="select-container">
+                <select id="clothingType">
+                    <option value="">Select Clothing Type</option>
+                    <option value="Shirt">👕 Shirt</option>
+                    <option value="Pants">👖 Pants</option>
+                    <option value="Dress">👗 Dress</option>
+                    <option value="Jacket">🧥 Jacket</option>
+                    <option value="Shoes">👟 Shoes</option>
+                    <option value="Hat">🧢 Hat</option>
+                    <option value="Accessory">💍 Accessory</option>
+                </select>
+            </div>
+            
+            <div class="select-container">
+                <select id="clothingSeason">
+                    <option value="">Select Season</option>
+                    <option value="Spring">🌱 Spring</option>
+                    <option value="Summer">☀️ Summer</option>
+                    <option value="Fall">🍂 Fall</option>
+                    <option value="Winter">❄️ Winter</option>
+                    <option value="All Seasons">🔄 All Seasons</option>
+                </select>
+            </div>
+            
+            <div class="select-container">
+                <select id="clothingColor">
+                    <option value="">Select Color</option>
+                    <option value="Black">⚫ Black</option>
+                    <option value="White">⚪ White</option>
+                    <option value="Red">🔴 Red</option>
+                    <option value="Blue">🔵 Blue</option>
+                    <option value="Green">🟢 Green</option>
+                    <option value="Yellow">🟡 Yellow</option>
+                    <option value="Purple">🟣 Purple</option>
+                    <option value="Brown">🟤 Brown</option>
+                    <option value="Pink">Pink</option>
+                    <option value="Orange">Orange</option>
+                    <option value="Gray">Gray</option>
+                </select>
+            </div>
+            
+            <button id="saveClothingBtn">Save</button>
+        </div>
+    </div>
+</body>
+</html>

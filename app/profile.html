@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Profile | IoT Wardrobe</title>
+    <script defer src="/static/dos_amigos.js"></script>
+    <script defer src="/static/profile.js"></script>
+    <link rel="stylesheet" href="/static/dos_amigos.css">
+</head>
+<body> <!-- Load devices automatically when the page loads -->
+    
+    <!-- Navbar Section -->
+    <nav class="navbar">
+        <ul>
+            <li><a href="dashboard">Dashboard</a></li>
+            <li><a href="wardrobe">Wardrobe</a></li>
+            <li><a href="profile">Profile</a></li>
+        </ul>
+    </nav>
+    
+    <!-- Logout Button Form (Positioned top-right) -->
+    <form action="/logout" method="post" class="logout-container">
+        <button type="submit" class="logout-button">Logout</button>
+    </form>
+    
+    <!-- Header -->
+    <header>
+        <h1>Welcome, {username}!</h1>
+        <p>Manage your IoT devices below</p>
+    </header>
+    
+    <!-- Main Content -->
+    <main>
+        <section id="device-management">
+            <h2>Your IoT Devices</h2>
+            <div class="device-list-container">
+                <ul id="device-list">
+                    <!-- Device list will be populated by JavaScript -->
+                </ul>
+            </div>
+            
+            <div class="add-device-container">
+                <h3>Add IoT Device</h3>
+                <div class="form-group">
+                    <input type="text" id="deviceID" placeholder="Enter Device ID">
+                    <button onclick="addDevice()" class="action-button">Add IoT Device</button>
+                </div>
+            </div>
+        </section>
+    <span id="current-username" style="display: none;">{username}</span>
+    </main>
+    
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2025 Dos Amigos</p>
+    </footer>
+</body>
+</html>
