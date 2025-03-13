@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Wardrobe | Digital Wardrobe</title>
     <link rel="stylesheet" href="/static/dos_amigos.css">
-    <link rel="stylesheet" href="/static/wardrobe.css">
     <script defer src="/static/dos_amigos.js"></script>
     <script defer src="/static/wardrobe.js"></script>
 </head>
@@ -96,6 +95,10 @@
             <button id="saveClothingBtn">Save</button>
         </div>
     </div>
-
+    <script>
+        // This should be rendered by your server-side template engine (e.g., Jinja2 if using Flask)
+        const currentUserId = "{{ user_id }}";  // Template variable to be populated by your backend
+        console.log("Current user ID:", currentUserId);
+    </script>
 </body>
 </html>

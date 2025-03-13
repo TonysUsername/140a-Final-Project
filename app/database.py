@@ -76,13 +76,17 @@ def create_tables():
                 unit VARCHAR(50) DEFAULT 'Percentage'
             )
         """,
-        "wardrobe": """
-            CREATE TABLE IF NOT EXISTS wardrobe (
+        "wardrobe_items": """
+            CREATE TABLE IF NOT EXISTS wardrobe_items (
                 id INT AUTO_INCREMENT PRIMARY KEY,
-                timestamp DATETIME,
-                value FLOAT,
-                unit VARCHAR(50) DEFAULT 'Percentage'
+                user_id INT NOT NULL,
+                item_name VARCHAR(255) NOT NULL,
+                category VARCHAR(100),
+                image_url VARCHAR(512),
+                added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
             )
+            
         """,
         "devices": """
             CREATE TABLE IF NOT EXISTS devices (
@@ -133,7 +137,7 @@ async def setup_database(initial_users: Dict[str, str] = None):
         cursor = connection.cursor()
 
         # Drop and recreate tables one by one
-        for table_name in ["iot_devices", "sessions", "users"]:
+        for table_name in ["wardrobe_items","iot_devices", "sessions", "users"]:
             # Drop table if exists
             logger.info(f"Dropping table {table_name} if exists...")
             cursor.execute(f"DROP TABLE IF EXISTS {table_name}")
@@ -166,11 +170,24 @@ async def setup_database(initial_users: Dict[str, str] = None):
             )
         """
 
+        wardrobe_items_query = """
+            CREATE TABLE IF NOT EXISTS wardrobe_items (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                item_name VARCHAR(255) NOT NULL,
+                category VARCHAR(100),
+                image_url VARCHAR(512),
+                added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        """
+
         # Create tables
         for table_name, create_query in [
             ("users", users_query), 
             ("sessions", sessions_query),
-            ("iot_devices", iot_devices_query)
+            ("iot_devices", iot_devices_query),
+            ("wardrobe_items", wardrobe_items_query)
         ]:
             try:
                 logger.info(f"Creating table {table_name}...")
@@ -534,6 +551,83 @@ async def get_devices() -> list:
             "SELECT d.*, u.username FROM iot_devices d JOIN users u ON d.user_id = u.id ORDER BY d.added_at DESC"
         )
         return cursor.fetchall()
+    finally:
+        if cursor:
+            cursor.close()
+        if connection and connection.is_connected():
+            connection.close()
+
+async def add_wardrobe_item(user_id: int, item_name: str, category: str = None, image_url: str = None) -> int:
+    """Add a new wardrobe item for a specific user"""
+    connection = None
+    cursor = None
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor()
+        cursor.execute(
+            "INSERT INTO wardrobe_items (user_id, item_name, category, image_url) VALUES (%s, %s, %s, %s)",
+            (user_id, item_name, category, image_url)
+        )
+        connection.commit()
+        return cursor.lastrowid  # Return the ID of the newly inserted item
+    except Error as e:
+        logger.error(f"Error adding wardrobe item: {e}")
+        if connection:
+            connection.rollback()
+        return 0  # Indicates failure
+    finally:
+        if cursor:
+            cursor.close()
+        if connection and connection.is_connected():
+            connection.close()
+
+async def get_wardrobe_items_by_user_id(user_id: int) -> list:
+    """Get all wardrobe items for a specific user"""
+    connection = None
+    cursor = None
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor(dictionary=True)
+        cursor.execute(
+            "SELECT * FROM wardrobe_items WHERE user_id = %s ORDER BY added_at DESC",
+            (user_id,)
+        )
+        result = cursor.fetchall()
+        # Convert non-serializable types to strings for JSON serialization
+        for row in result:
+            for key, value in row.items():
+                if isinstance(value, (decimal.Decimal)):
+                    row[key] = float(value)
+                elif isinstance(value, datetime):
+                    row[key] = value.isoformat()
+        return result
+    except Exception as e:
+        logger.error(f"Error fetching wardrobe items for user {user_id}: {e}")
+        return []
+    finally:
+        if cursor:
+            cursor.close()
+        if connection and connection.is_connected():
+            connection.close()
+
+async def delete_wardrobe_item(item_id: int, user_id: int) -> bool:
+    """Delete a wardrobe item (ensuring it belongs to the specified user)"""
+    connection = None
+    cursor = None
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor()
+        cursor.execute(
+            "DELETE FROM wardrobe_items WHERE id = %s AND user_id = %s",
+            (item_id, user_id)
+        )
+        connection.commit()
+        return cursor.rowcount > 0
+    except Error as e:
+        logger.error(f"Error deleting wardrobe item: {e}")
+        if connection:
+            connection.rollback()
+        return False
     finally:
         if cursor:
             cursor.close()

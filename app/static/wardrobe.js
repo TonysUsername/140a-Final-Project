@@ -102,9 +102,6 @@ function renderWardrobe() {
 
     // Save updated wardrobe to localStorage
     localStorage.setItem("wardrobe", JSON.stringify(wardrobe));
-    
-    // Also save to server (if available)
-    saveWardrobeToServer();
 }
 
 // Function to ensure the add button is always visible
@@ -113,30 +110,88 @@ function ensureAddButtonVisible() {
     addClothingBtn.classList.add("fixed-add-btn");
 }
 
-// Function to save wardrobe to server
-async function saveWardrobeToServer() {
+// Function to save wardrobe item to server
+async function saveItemToServer(item) {
+    // Skip items that already have an ID (they're already in the database)
+    if (item.id) return item.id;
+    
     try {
-        const response = await fetch("/api/save-wardrobe", {
+        const response = await fetch("/api/wardrobe", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
             },
-            body: JSON.stringify({ wardrobe }),
+            body: JSON.stringify({
+                userId: currentUserId,  // Add this line to associate items with the user
+                itemName: item.name,
+                category: item.type,
+                imageUrl: item.imageUrl,
+                season: item.season,
+                color: item.color
+            }),
         });
 
         if (!response.ok) {
-            console.error("Failed to save wardrobe to server");
+            console.error("Failed to save wardrobe item to server");
+            return null;
         }
+        
+        const data = await response.json();
+        return data.id || null;
     } catch (error) {
         console.error("Error saving to server:", error);
+        return null;
     }
 }
 
-// Function to remove clothing
+// removeClothing function with better error handling
 function removeClothing(index) {
     if (confirm("Are you sure you want to remove this item?")) {
-        wardrobe.splice(index, 1);
-        renderWardrobe();
+        const item = wardrobe[index];
+        
+        // Find the card element based on the index
+        const card = document.querySelector(`.clothing-card[data-index="${index}"]`);
+        
+        // Add a loading indication if card exists
+        if (card) card.classList.add("deleting");
+        
+        // If the item has an ID, it exists on the server and should be deleted
+        if (item && item.id) {
+            const url = `/api/wardrobe/${item.id}?user_id=${currentUserId}`;
+            console.log(`Sending DELETE request to: ${url}`);
+            
+            fetch(url, {
+                method: "DELETE",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                credentials: "same-origin"
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        throw new Error(data.error || `Server responded with status ${response.status}`);
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Server deletion was successful, now update local state
+                console.log("Item deleted successfully:", data);
+                wardrobe.splice(index, 1);
+                renderWardrobe();
+            })
+            .catch(error => {
+                console.error("Error deleting from server:", error);
+                if (card) card.classList.remove("deleting");
+                alert(`Failed to delete item: ${error.message}`);
+            });
+        } else {
+            // Item only exists locally or doesn't have an ID
+            console.log("Removing local-only item at index:", index);
+            wardrobe.splice(index, 1);
+            renderWardrobe();
+        }
     }
 }
 
@@ -188,7 +243,7 @@ window.addEventListener("click", (event) => {
 });
 
 // Save or update clothing
-saveClothingBtn.addEventListener("click", () => {
+saveClothingBtn.addEventListener("click", async () => {
     const name = clothingNameInput.value.trim();
     const type = clothingTypeInput.value.trim();
     const season = clothingSeasonInput.value.trim();
@@ -202,29 +257,36 @@ saveClothingBtn.addEventListener("click", () => {
             saveClothingBtn.textContent = "Saving...";
             saveClothingBtn.disabled = true;
             
+            let newItem = { 
+                name, 
+                type, 
+                season, 
+                color,
+                imageUrl
+            };
+            
             if (editIndex !== null) {
                 // Update existing item
-                wardrobe[editIndex] = { 
-                    name, 
-                    type, 
-                    season, 
-                    color,
-                    imageUrl
-                };
+                const oldItem = wardrobe[editIndex];
+                newItem.id = oldItem.id; // Preserve the ID if it exists
+                wardrobe[editIndex] = newItem;
+                
+                // If the item has an ID, we'll need to implement an update endpoint
+                // For now we're just updating the local wardrobe
             } else {
-                // Add new item
-                wardrobe.push({ 
-                    name, 
-                    type, 
-                    season, 
-                    color,
-                    imageUrl
-                });
+                // Add new item - save to server first, then add to local wardrobe
+                const itemId = await saveItemToServer(newItem);
+                if (itemId) {
+                    newItem.id = itemId;
+                }
+                wardrobe.push(newItem);
             }
+            
+            // Update local storage
+            localStorage.setItem("wardrobe", JSON.stringify(wardrobe));
             
             renderWardrobe();
             modal.style.display = "none";
-
         } catch (error) {
             alert("Error: " + error.message);
         } finally {
@@ -237,28 +299,42 @@ saveClothingBtn.addEventListener("click", () => {
     }
 });
 
-// Initial render
+// Initial load - ONE DOMContentLoaded event handler
 document.addEventListener("DOMContentLoaded", () => {
     // Make sure the add button is always visible
     ensureAddButtonVisible();
     
     // Load wardrobe from server first, fall back to localStorage
-    fetch("/api/get-wardrobe")
-        .then(response => {
-            if (!response.ok) {
-                throw new Error("Failed to get wardrobe from server");
-            }
-            return response.json();
-        })
+    fetch(`/api/wardrobe?user_id=${currentUserId}`)
+    .then(response => {
+        if (!response.ok) {
+            throw new Error("Failed to get wardrobe from server");
+        }
+        return response.json();
+    })
         .then(data => {
-            if (data.wardrobe && data.wardrobe.length > 0) {
-                wardrobe = data.wardrobe;
+            // Check for the correct data structure from server
+            if (data.items && Array.isArray(data.items) && data.items.length > 0) {
+                // Transform the server items format to match your frontend format
+                wardrobe = data.items.map(item => ({
+                    id: item.id,
+                    name: item.item_name,
+                    type: item.category || "Other",
+                    imageUrl: item.image_url,
+                    // You may need to add defaults for season and color
+                    season: item.season || "All Seasons",
+                    color: item.color || "Various"
+                }));
                 localStorage.setItem("wardrobe", JSON.stringify(wardrobe));
+            } else {
+                // Use local storage as fallback
+                wardrobe = JSON.parse(localStorage.getItem("wardrobe")) || [];
             }
             renderWardrobe();
         })
         .catch(error => {
             console.error("Using local wardrobe:", error);
+            wardrobe = JSON.parse(localStorage.getItem("wardrobe")) || [];
             renderWardrobe();
         });
 });

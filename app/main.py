@@ -22,7 +22,10 @@ from app.database import (
     get_db_connection,
     delete_device,
     get_devices_by_user_id,  
-    get_devices_by_device_id
+    get_devices_by_device_id,
+    add_wardrobe_item,
+    get_wardrobe_items_by_user_id,
+    delete_wardrobe_item
 )
 
 load_dotenv()
@@ -320,6 +323,122 @@ async def wardrobe(request: Request):
     html_content = read_html("app/wardrobe.html").replace("{username}", user["username"])
     return HTMLResponse(content=html_content)
 
+@app.get("/api/wardrobe")
+async def get_wardrobe_api(request: Request):
+    """Get all wardrobe items for the authenticated user"""
+    try:
+        # Authenticate user
+        user = await require_authenticated_user(request)
+        
+        # Get user ID from session
+        user_details = await get_user_by_username(user["username"])
+        
+        if not user_details:
+            return JSONResponse(content={"error": "User not found"}, status_code=404)
+            
+        user_id = user_details["id"]
+        
+        # Add logging to verify user_id
+        print(f"Fetching wardrobe items for user_id: {user_id}")
+
+        # Get wardrobe items from database
+        items = await get_wardrobe_items_by_user_id(user_id)
+        
+        # Add verification that all items belong to this user
+        for item in items:
+            if item['user_id'] != user_id:
+                print(f"WARNING: Item {item['id']} belongs to user {item['user_id']}, not {user_id}")
+        
+        # Filter items to only include those belonging to the current user
+        items = [item for item in items if item['user_id'] == user_id]
+        
+        return JSONResponse(content={"items": items})
+    except HTTPException as e:
+        if e.status_code == 303:  # Redirect for authentication
+            return JSONResponse(content={"error": "Authentication required"}, status_code=401)
+        raise
+    except Exception as e:
+        print(f"Error in get_wardrobe_api: {str(e)}")
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+    
+@app.post("/api/wardrobe")
+async def add_wardrobe_item_api(
+    request: Request,
+    data: dict = Body(...)
+):
+    """Add a new wardrobe item"""
+    try:
+        # Authenticate user
+        user = await require_authenticated_user(request)
+        
+        # Get user ID from session
+        user_details = await get_user_by_username(user["username"])
+        user_id = user_details["id"]
+
+        # Validate request data
+        item_name = data.get("itemName")
+        category = data.get("category", None)  # Optional
+        image_url = data.get("imageUrl", None)  # Optional
+        
+        if not item_name:
+            return JSONResponse(
+                content={"error": "Item name is required"}, 
+                status_code=400
+            )
+        
+        # Add item to database
+        item_id = await add_wardrobe_item(user_id, item_name, category, image_url)
+        
+        if item_id:
+            return JSONResponse(content={"success": True, "id": item_id})
+        else:
+            return JSONResponse(
+                content={"error": "Failed to add wardrobe item"}, 
+                status_code=500
+            )
+    except HTTPException as e:
+        if e.status_code == 303:  # Redirect for authentication
+            return JSONResponse(content={"error": "Authentication required"}, status_code=401)
+        raise
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+@app.delete("/api/wardrobe/{item_id}")
+async def delete_wardrobe_item_api(
+    item_id: int,
+    request: Request
+):
+    """Delete a wardrobe item"""
+    try:
+        # Authenticate user
+        user = await require_authenticated_user(request)
+        
+        # Get user ID from session
+        user_details = await get_user_by_username(user["username"])
+        user_id = user_details["id"]
+
+        print(f"Attempting to delete item {item_id} for user {user_id}")
+
+        # Delete item from database
+        success = await delete_wardrobe_item(item_id, user_id)
+        
+        print(f"Delete result: {success}")
+        
+        if success:
+            return JSONResponse(content={"success": True})
+        else:
+            return JSONResponse(
+                content={"error": "Item not found or deletion failed"}, 
+                status_code=404
+            )
+    except HTTPException as e:
+        if e.status_code == 303:  # Redirect for authentication
+            return JSONResponse(content={"error": "Authentication required"}, status_code=401)
+        raise
+    except Exception as e:
+        print(f"Error in delete_wardrobe_item_api: {str(e)}")
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+    
 @app.get("/user/profile", response_class=HTMLResponse)
 async def profile(request: Request):
     """Show the user profile if authenticated"""
