@@ -1,33 +1,23 @@
 import os
 import uuid
-from fastapi import Body, FastAPI, Request, Response, HTTPException, status, Query
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
-from typing import Dict, List
 from contextlib import asynccontextmanager
 from datetime import datetime
-from dotenv import load_dotenv
+from typing import Dict, List
+
 import mysql.connector as mysql
-from fastapi.staticfiles import StaticFiles
 import requests
+from dotenv import load_dotenv
+from fastapi import (Body, FastAPI, HTTPException, Query, Request, Response,
+                     status)
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, validator
 
-from app.database import (
-    add_device,
-    setup_database,
-    get_user_by_username,
-    get_user_by_id,
-    create_session,
-    get_session,
-    delete_session,
-    get_db_connection,
-    delete_device,
-    get_devices_by_user_id,  
-    get_devices_by_device_id,
-    add_wardrobe_item,
-    get_wardrobe_items_by_user_id,
-    delete_wardrobe_item
-)
-
+from app.database import (add_device, create_session, delete_device,
+                          delete_session, get_db_connection,
+                          get_devices_by_device_id, get_devices_by_user_id,
+                          get_session, get_user_by_id, get_user_by_username,
+                          setup_database)
 load_dotenv()
 LLM_TEXT_API = os.getenv("LLM_TEXT_API")
 LLM_IMAGE_API = os.getenv("LLM_IMAGE_API")
@@ -107,6 +97,16 @@ async def lifespan(app: FastAPI):
 
 # Create the FastAPI application with the defined lifespan
 app = FastAPI(lifespan=lifespan)
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:6543"],  # Replace with your frontend URL
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
@@ -706,9 +706,9 @@ async def get_temperature(request: Request, device_id: str = Query(None)):
         user = await require_authenticated_user(request)
         
         # Mock data - replace with actual database queries
-        from datetime import datetime, timedelta
         import random
-        
+        from datetime import datetime, timedelta
+
         # Generate last 10 data points
         data = []
         for i in range(10):
@@ -739,9 +739,9 @@ async def get_humidity(request: Request, device_id: str = Query(None)):
         user = await require_authenticated_user(request)
         
         # Mock data - replace with actual database queries
-        from datetime import datetime, timedelta
         import random
-        
+        from datetime import datetime, timedelta
+
         # Generate last 10 data points
         data = []
         for i in range(10):
@@ -772,9 +772,9 @@ async def get_light(request: Request, device_id: str = Query(None)):
         user = await require_authenticated_user(request)
         
         # Mock data - replace with actual database queries
-        from datetime import datetime, timedelta
         import random
-        
+        from datetime import datetime, timedelta
+
         # Generate last 10 data points
         data = []
         for i in range(10):
@@ -800,59 +800,110 @@ async def sensors_dashboard(request: Request):
     html_content = read_html("app/sensors.html").replace("{username}", user["username"])
     return HTMLResponse(content=html_content)
 
-@app.post("/ai/recommendation/")
-async def get_ai_recommendation(temperature: float = Body(...), humidity: float = Body(...)):
-    """
-    Generate outfit recommendations based on temperature and humidity.
-    """
-    prompt = f"The temperature is {temperature}°C and humidity is {humidity}%. What should I wear today?"
-    headers = {"email": EMAIL, "pid": PID, "Content-Type": "application/json"}
-    payload = {"prompt": prompt}
+from fastapi import Header
 
+@app.post("/ai/recommendation/")
+async def get_ai_recommendation(
+    request: Request,
+    email: str = Header(..., alias="email"),  # Extract email from header
+    pid: str = Header(..., alias="pid")       # Extract pid from header
+):
     try:
+        data = await request.json()
+        temperature = float(data.get('temperature', 0))
+        humidity = float(data.get('humidity', 0))
+        
+        prompt = f"The temperature is {temperature}°C and humidity is {humidity}%. What should I wear today?"
+        
+        # Use extracted headers
+        headers = {
+            "email": email,
+            "pid": pid,
+            "Content-Type": "application/json"
+        }
+        
+        payload = {"prompt": prompt}
+        
+        # Use the correct API endpoint
         response = requests.post(LLM_TEXT_API, json=payload, headers=headers)
         response.raise_for_status()
         
-        # Parse the response according to the API documentation
         ai_response = response.json()
-        
-        # The API returns a structure like {"success": true, "result": {"response": "..."}}
         if ai_response.get("success"):
             return {"result": {"response": ai_response["result"]["response"]}}
         else:
             raise HTTPException(status_code=500, detail="AI API returned failure")
+    
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid values")
     except requests.RequestException as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/ai/generate-image/")
-async def generate_ai_image(item_name: str = Body(...)):
-    """
-    Generate an image for a wardrobe item.
-    """
-    prompt = f"A stylish {item_name} for an outfit"
-    headers = {"email": EMAIL, "pid": PID, "Content-Type": "application/json"}
-    payload = {"prompt": prompt, "width": 512, "height": 512}
-
+@app.post("/proxy/ai/complete")
+async def proxy_ai_complete(
+    request: Request,
+    email: str = Header(..., alias="email"),  # Extract email from header
+    pid: str = Header(..., alias="pid")       # Extract pid from header
+):
     try:
-        response = requests.post(LLM_IMAGE_API, json=payload, headers=headers)
+        data = await request.json()
+        
+        # Forward the request to the AI API
+        headers = {
+            "email": email,
+            "pid": pid,
+            "Content-Type": "application/json"
+        }
+        
+        response = requests.post(
+            "https://ece140-wi25-api.frosty-sky-f43d.workers.dev/api/v1/ai/complete",
+            json=data,
+            headers=headers
+        )
         response.raise_for_status()
         
-        # Parse the response according to the API documentation
-        ai_response = response.json()
-        
-        # The API returns a structure like {"success": true, "result": {"imageUrl": "..."}}
-        if ai_response.get("success"):
-            # Return in the format expected by the JS
-            return {"image_url": ai_response["result"]["imageUrl"]}
-        else:
-            raise HTTPException(status_code=500, detail="AI API returned failure")
+        return response.json()
     except requests.RequestException as e:
         raise HTTPException(status_code=500, detail=str(e))
-
+    
 @app.get("/weather", response_class=HTMLResponse)
 def get_weather():
     with open("Weather/weather.html") as html_file:
         return HTMLResponse(content = html_file.read())
+@app.post("/ai/chat/")
+async def chat_with_ai(
+    request: Request,
+    email: str = Header(..., alias="email"),  # Extract email from header
+    pid: str = Header(..., alias="pid")       # Extract pid from header
+):
+    try:
+        data = await request.json()
+        prompt = data.get('prompt', '')
+
+        # Use extracted headers
+        headers = {
+            "email": email,
+            "pid": pid,
+            "Content-Type": "application/json"
+        }
+
+        # Send the prompt to the AI API
+        response = requests.post(
+            "https://ece140-wi25-api.frosty-sky-f43d.workers.dev/api/v1/ai/complete",
+            json={"prompt": prompt},
+            headers=headers
+        )
+        response.raise_for_status()
+
+        ai_response = response.json()
+        if ai_response.get("success"):
+            return {"result": {"response": ai_response["result"]["response"]}}
+        else:
+            raise HTTPException(status_code=500, detail="AI API returned failure")
+
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid values")
+    except requests.RequestException as e:
+        raise HTTPException(status_code=500, detail=str(e))
 # Run the application
 if __name__ == "__main__":
     import uvicorn
