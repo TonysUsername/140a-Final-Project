@@ -302,4 +302,93 @@ document.addEventListener('DOMContentLoaded', () => {
     if (recommendationButton) {
         recommendationButton.addEventListener('click', getOutfitRecommendation);
     }
+    // Function to add a message to the chat history
+function addMessageToChatHistory(message, isUser) {
+    const chatHistory = document.getElementById('chat-history');
+    const messageDiv = document.createElement('div');
+    messageDiv.classList.add('message', isUser ? 'user' : 'ai');
+
+    const messageContent = document.createElement('div');
+    messageContent.classList.add('message-content');
+    messageContent.textContent = message;
+
+    messageDiv.appendChild(messageContent);
+    chatHistory.appendChild(messageDiv);
+
+    // Scroll to the bottom of the chat history
+    chatHistory.scrollTop = chatHistory.scrollHeight;
+}
+
+// Function to send a message to the AI API
+async function sendMessageToAI(message) {
+    try {
+        const response = await fetch('/ai/chat/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'email': 'nmulla@ucsd.edu',  // Include email header
+                'pid': 'A17277029'           // Include PID header
+            },
+            body: JSON.stringify({
+                prompt: message
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        if (data.result && data.result.response) {
+            return data.result.response;
+        } else {
+            throw new Error('Invalid response format');
+        }
+    } catch (error) {
+        console.error('Error sending message to AI:', error);
+        return "Sorry, I couldn't process your request. Please try again later.";
+    }
+}
+
+// Event listener for the send button
+document.getElementById('send-button').addEventListener('click', async () => {
+    const chatInput = document.getElementById('chat-input');
+    const message = chatInput.value.trim();
+
+    if (message) {
+        // Add the user's message to the chat history
+        addMessageToChatHistory(message, true);
+
+        // Clear the input field
+        chatInput.value = '';
+
+        // Send the message to the AI API
+        const aiResponse = await sendMessageToAI(message);
+
+        // Add the AI's response to the chat history
+        addMessageToChatHistory(aiResponse, false);
+    }
+});
+
+// Allow pressing Enter to send a message
+document.getElementById('chat-input').addEventListener('keypress', async (e) => {
+    if (e.key === 'Enter') {
+        const chatInput = document.getElementById('chat-input');
+        const message = chatInput.value.trim();
+
+        if (message) {
+            // Add the user's message to the chat history
+            addMessageToChatHistory(message, true);
+
+            // Clear the input field
+            chatInput.value = '';
+
+            // Send the message to the AI API
+            const aiResponse = await sendMessageToAI(message);
+
+            // Add the AI's response to the chat history
+            addMessageToChatHistory(aiResponse, false);
+        }
+    }
+});
 });

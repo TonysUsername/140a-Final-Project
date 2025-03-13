@@ -8,28 +8,28 @@
     <script defer src="/static/profile.js"></script>
     <link rel="stylesheet" href="/static/dos_amigos.css">
 </head>
-<body> <!-- Load devices automatically when the page loads -->
-    
-    <!-- Navbar Section -->
+<body>
+    <!-- Navbar Section with Logout -->
     <nav class="navbar">
         <ul>
             <li><a href="dashboard">Dashboard</a></li>
             <li><a href="wardrobe">Wardrobe</a></li>
             <li><a href="profile">Profile</a></li>
+            <li>
+                <!-- Logout Form styled as nav link -->
+                <form action="/logout" method="post" class="nav-logout-form">
+                    <button type="submit" class="nav-logout-button">Logout</button>
+                </form>
+            </li>
         </ul>
     </nav>
-    
-    <!-- Logout Button Form (Positioned top-right) -->
-    <form action="/logout" method="post" class="logout-container">
-        <button type="submit" class="logout-button">Logout</button>
-    </form>
-    
+
     <!-- Header -->
     <header>
         <h1>Welcome, {username}!</h1>
         <p>Manage your IoT devices below</p>
     </header>
-    
+
     <!-- Main Content -->
     <main>
         <section id="device-management">
@@ -48,9 +48,9 @@
                 </div>
             </div>
         </section>
-    <span id="current-username" style="display: none;">{username}</span>
+        <span id="current-username" style="display: none;">{username}</span>
     </main>
-    
+
     <!-- Footer -->
     <footer>
         <p>&copy; 2025 Dos Amigos</p>

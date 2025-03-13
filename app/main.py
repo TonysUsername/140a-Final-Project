@@ -753,6 +753,41 @@ async def proxy_ai_complete(
 def get_weather():
     with open("Weather/weather.html") as html_file:
         return HTMLResponse(content = html_file.read())
+@app.post("/ai/chat/")
+async def chat_with_ai(
+    request: Request,
+    email: str = Header(..., alias="email"),  # Extract email from header
+    pid: str = Header(..., alias="pid")       # Extract pid from header
+):
+    try:
+        data = await request.json()
+        prompt = data.get('prompt', '')
+
+        # Use extracted headers
+        headers = {
+            "email": email,
+            "pid": pid,
+            "Content-Type": "application/json"
+        }
+
+        # Send the prompt to the AI API
+        response = requests.post(
+            "https://ece140-wi25-api.frosty-sky-f43d.workers.dev/api/v1/ai/complete",
+            json={"prompt": prompt},
+            headers=headers
+        )
+        response.raise_for_status()
+
+        ai_response = response.json()
+        if ai_response.get("success"):
+            return {"result": {"response": ai_response["result"]["response"]}}
+        else:
+            raise HTTPException(status_code=500, detail="AI API returned failure")
+
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid values")
+    except requests.RequestException as e:
+        raise HTTPException(status_code=500, detail=str(e))
 # Run the application
 if __name__ == "__main__":
     import uvicorn
