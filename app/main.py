@@ -13,11 +13,21 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, validator
 
-from app.database import (add_device, create_session, delete_device,
-                          delete_session, get_db_connection,
-                          get_devices_by_device_id, get_devices_by_user_id,
-                          get_session, get_user_by_id, get_user_by_username,
-                          setup_database)
+from app.database import (
+    add_device, 
+    create_session, 
+    delete_device,
+    delete_session, 
+    get_db_connection,
+    get_devices_by_device_id, 
+    get_devices_by_user_id,
+    get_session, 
+    get_user_by_id, 
+    get_user_by_username,
+    setup_database,
+    add_wardrobe_item,
+    get_wardrobe_items_by_user_id,
+    delete_wardrobe_item)
 load_dotenv()
 LLM_TEXT_API = os.getenv("LLM_TEXT_API")
 LLM_IMAGE_API = os.getenv("LLM_IMAGE_API")
@@ -320,7 +330,14 @@ async def dashboard(request: Request):
 async def wardrobe(request: Request):
     """Show the wardrobe if authenticated"""
     user = await require_authenticated_user(request)
-    html_content = read_html("app/wardrobe.html").replace("{username}", user["username"])
+    user_details = await get_user_by_username(user["username"])
+    user_id = user_details["id"]
+    
+    # Use a template engine properly or do a better replacement
+    html_content = read_html("app/wardrobe.html")
+    html_content = html_content.replace("{username}", user["username"])
+    html_content = html_content.replace("{{ user_id }}", str(user_id))  # Add this line
+    
     return HTMLResponse(content=html_content)
 
 @app.get("/api/wardrobe")
@@ -362,10 +379,7 @@ async def get_wardrobe_api(request: Request):
         return JSONResponse(content={"error": str(e)}, status_code=500)
     
 @app.post("/api/wardrobe")
-async def add_wardrobe_item_api(
-    request: Request,
-    data: dict = Body(...)
-):
+async def add_wardrobe_item_api(request: Request, data: dict = Body(...)):
     """Add a new wardrobe item"""
     try:
         # Authenticate user
@@ -375,10 +389,14 @@ async def add_wardrobe_item_api(
         user_details = await get_user_by_username(user["username"])
         user_id = user_details["id"]
 
+        # Log received data
+        print(f"Received wardrobe item data: {data}")
+        print(f"Adding item for user_id: {user_id}")
+
         # Validate request data
         item_name = data.get("itemName")
-        category = data.get("category", None)  # Optional
-        image_url = data.get("imageUrl", None)  # Optional
+        category = data.get("category", None)
+        image_url = data.get("imageUrl", None)
         
         if not item_name:
             return JSONResponse(
@@ -387,7 +405,10 @@ async def add_wardrobe_item_api(
             )
         
         # Add item to database
+        print(f"Calling add_wardrobe_item with: user_id={user_id}, item_name={item_name}, category={category}, image_url={image_url}")
         item_id = await add_wardrobe_item(user_id, item_name, category, image_url)
+        
+        print(f"Result from add_wardrobe_item: {item_id}")
         
         if item_id:
             return JSONResponse(content={"success": True, "id": item_id})
@@ -396,11 +417,10 @@ async def add_wardrobe_item_api(
                 content={"error": "Failed to add wardrobe item"}, 
                 status_code=500
             )
-    except HTTPException as e:
-        if e.status_code == 303:  # Redirect for authentication
-            return JSONResponse(content={"error": "Authentication required"}, status_code=401)
-        raise
     except Exception as e:
+        print(f"Exception in add_wardrobe_item_api: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
 @app.delete("/api/wardrobe/{item_id}")

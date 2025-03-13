@@ -11,15 +11,8 @@
     <!-- Navbar Section -->
     <nav class="navbar">
         <ul>
-            <li><a href="/user/dashboard">Dashboard</a></li>
             <li><a href="/user/wardrobe">Wardrobe</a></li>
             <li><a href="/user/profile">Profile</a></li>
-            <li>
-                <!-- Logout Form styled as nav link -->
-                <form action="/logout" method="post" class="nav-logout-form">
-                    <button type="submit" class="nav-logout-button">Logout</button>
-                </form>
-            </li>
         </ul>
     </nav>
     <!-- Header -->
@@ -27,7 +20,10 @@
         <h1>Dashboard</h1>
     </header>
     
-
+<!-- Logout Button Form (Positioned top-right) -->
+<form action="/logout" method="post" class="logout-container">
+    <button type="submit" class="logout-button">Logout</button>
+</form>
      <!-- Weather Section -->
     <section class="weather-card">
         <div class="weather-container">
@@ -55,7 +51,7 @@
             </div>
         </div>
     </section>
-   <!-- Add this after your weather section -->
+   
 <section class="recommendation-card">
     <div class="recommendation-container">
         <h2 class="recommendation-title">What Should I Wear Today?</h2>
@@ -81,6 +77,16 @@
     
     <!-- Main Content -->
     <main>
+    <!-- Data Range Selector -->
+        <div class="data-range-selector">
+            <h3>Data Points to Display:</h3>
+            <div class="range-buttons">
+                <button class="range-button active" data-range="10">Last 50 min</button>
+                <button class="range-button" data-range="50">Last 250min</button>
+                <button class="range-button" data-range="100">Last 500min</button>
+            </div>
+        </div>
+        
         <div class="dashboard-container">
             <div class="card">
                 <h2>Temperature</h2>

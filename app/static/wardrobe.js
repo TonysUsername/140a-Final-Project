@@ -122,18 +122,17 @@ async function saveItemToServer(item) {
                 "Content-Type": "application/json",
             },
             body: JSON.stringify({
-                userId: currentUserId,  // Add this line to associate items with the user
-                itemName: item.name,
-                category: item.type,
-                imageUrl: item.imageUrl,
-                season: item.season,
-                color: item.color
+                itemName: item.name,         // Match API expectation
+                category: item.type,         // Match API expectation
+                imageUrl: item.imageUrl
+                // Remove userId - your backend gets this from the session
             }),
         });
 
         if (!response.ok) {
-            console.error("Failed to save wardrobe item to server");
-            return null;
+            const errorData = await response.json();
+            console.error("Server error:", errorData);
+            throw new Error(errorData.error || "Failed to save item");
         }
         
         const data = await response.json();
@@ -157,10 +156,8 @@ function removeClothing(index) {
         
         // If the item has an ID, it exists on the server and should be deleted
         if (item && item.id) {
-            const url = `/api/wardrobe/${item.id}?user_id=${currentUserId}`;
-            console.log(`Sending DELETE request to: ${url}`);
-            
-            fetch(url, {
+            // Remove the user_id parameter - your backend gets this from the session
+            fetch(`/api/wardrobe/${item.id}`, {
                 method: "DELETE",
                 headers: {
                     "Content-Type": "application/json"
@@ -304,37 +301,49 @@ document.addEventListener("DOMContentLoaded", () => {
     // Make sure the add button is always visible
     ensureAddButtonVisible();
     
+    // First, check if we have a valid user ID
+    if (!currentUserId || currentUserId === "{{ user_id }}") {
+        console.error("User ID not properly set. Template variable not rendered.");
+        wardrobe = JSON.parse(localStorage.getItem("wardrobe")) || [];
+        renderWardrobe();
+        return;
+    }
+    
     // Load wardrobe from server first, fall back to localStorage
-    fetch(`/api/wardrobe?user_id=${currentUserId}`)
+    fetch('/api/wardrobe')  // Remove the query parameter, backend gets user from session
     .then(response => {
         if (!response.ok) {
-            throw new Error("Failed to get wardrobe from server");
+            return response.json().then(data => {
+                throw new Error(data.error || `Server responded with status ${response.status}`);
+            });
         }
         return response.json();
     })
-        .then(data => {
-            // Check for the correct data structure from server
-            if (data.items && Array.isArray(data.items) && data.items.length > 0) {
-                // Transform the server items format to match your frontend format
-                wardrobe = data.items.map(item => ({
-                    id: item.id,
-                    name: item.item_name,
-                    type: item.category || "Other",
-                    imageUrl: item.image_url,
-                    // You may need to add defaults for season and color
-                    season: item.season || "All Seasons",
-                    color: item.color || "Various"
-                }));
-                localStorage.setItem("wardrobe", JSON.stringify(wardrobe));
-            } else {
-                // Use local storage as fallback
-                wardrobe = JSON.parse(localStorage.getItem("wardrobe")) || [];
-            }
-            renderWardrobe();
-        })
-        .catch(error => {
-            console.error("Using local wardrobe:", error);
+    .then(data => {
+        console.log("Received data from server:", data);
+        
+        // Check for the correct data structure from server
+        if (data.items && Array.isArray(data.items)) {
+            // Transform the server items format to match your frontend format
+            wardrobe = data.items.map(item => ({
+                id: item.id,
+                name: item.item_name,
+                type: item.category || "Other",
+                imageUrl: item.image_url,
+                // You may need to add defaults for season and color
+                season: item.season || "All Seasons",
+                color: item.color || "Various"
+            }));
+            localStorage.setItem("wardrobe", JSON.stringify(wardrobe));
+        } else {
+            console.warn("Unexpected data format from server:", data);
             wardrobe = JSON.parse(localStorage.getItem("wardrobe")) || [];
-            renderWardrobe();
-        });
+        }
+        renderWardrobe();
+    })
+    .catch(error => {
+        console.error("Error loading wardrobe:", error);
+        wardrobe = JSON.parse(localStorage.getItem("wardrobe")) || [];
+        renderWardrobe();
+    });
 });

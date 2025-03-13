@@ -1,6 +1,8 @@
 const BASE_URL = 'https://ece140-wi25-api.frosty-sky-f43d.workers.dev';
 const LLM_TEXT_API = `${BASE_URL}/api/v1/ai/complete`;  // Text generation endpoint
 const LLM_IMAGE_API = `${BASE_URL}/api/v1/ai/image`;    // Image generation endpoint
+let currentDataRange = 10; // Default to 10 data points
+
 // Function to format date and time properly with timezone handling
 function formatDateTime(isoString) {
     // Check if the timestamp is in ISO format, MySQL datetime format, or timestamp format
@@ -91,7 +93,7 @@ function ensureCorrectTimestampFormat(dataPoint) {
 }
 
 // Render chart with properly formatted date/time
-async function renderChart(sensorType, chartId, label, color) {
+async function renderChart(sensorType, chartId, label, color, dataRange = currentDataRange) {
     const data = await fetchData(sensorType);
     if (!data || data.length === 0) {
         console.error(`No data received for ${sensorType}`);
@@ -106,10 +108,11 @@ async function renderChart(sensorType, chartId, label, color) {
         return;
     }
     
-    const last10Data = data.slice(-10);
+    // Get the last N data points based on dataRange
+    const lastNData = data.slice(-dataRange);
     
     // Process timestamps and fix any issues
-    const processedData = last10Data.map(item => {
+    const processedData = lastNData.map(item => {
         return {
             timestamp: ensureCorrectTimestampFormat(item),
             value: item.value
@@ -121,10 +124,15 @@ async function renderChart(sensorType, chartId, label, color) {
     const values = processedData.map(item => item.value);
     
     // Display the processed values for debugging
-    console.log("Formatted labels:", formattedLabels);
-    console.log("Values:", values);
-
+    console.log(`Showing last ${dataRange} data points for ${sensorType}`);
+    
     const ctx = document.getElementById(chartId).getContext('2d');
+    // Destroy existing chart if it exists to prevent duplicates
+    const existingChart = Chart.getChart(ctx);
+    if (existingChart) {
+        existingChart.destroy();
+    }
+    
     new Chart(ctx, {
         type: 'line',
         data: {
@@ -174,17 +182,23 @@ async function renderChart(sensorType, chartId, label, color) {
     });
 }
 
-// Add this function to get the latest sensor data
+// Function to refresh all charts with the current data range
+function refreshAllCharts() {
+    renderChart('temperature', 'temperature_Chart', 'Temperature (°C)', 'rgba(255, 99, 132, 1)', currentDataRange);
+    renderChart('humidity', 'humidity_Chart', 'Humidity (%)', 'rgba(54, 162, 235, 1)', currentDataRange);
+    renderChart('light', 'light_Chart', 'Light Level (lux)', 'rgba(255, 206, 86, 1)', currentDataRange);
+}
+
+// Update the getLatestSensorData function to always include the device_id parameter
 async function getLatestSensorData(sensorType) {
     try {
-        // Try to get device-specific data first
+        // Get the device ID from the selector if it exists
         const deviceSelector = document.getElementById('device-selector');
-        const deviceId = deviceSelector ? deviceSelector.value : null;
+        const deviceId = deviceSelector ? deviceSelector.value : 'default'; // Use 'default' as fallback
         
-        let url = `/api/sensor/${sensorType}/latest`;
-        if (deviceId) {
-            url += `?device_id=${deviceId}`;
-        }
+        // Use the correct API endpoint with the device_id parameter
+        const url = `/api/sensor/${sensorType}/latest?device_id=${deviceId}`;
+        console.log(`Fetching ${sensorType} data from: ${url}`);
         
         const response = await fetch(url);
         if (!response.ok) {
@@ -192,30 +206,30 @@ async function getLatestSensorData(sensorType) {
         }
         
         const data = await response.json();
+        console.log(`Device ${sensorType} data:`, data);
         return data.value;
     } catch (error) {
         console.error(`Error fetching latest ${sensorType} data:`, error);
         
-        // Fallback to weather data if sensor data is unavailable
-        if (sensorType === 'temperature') {
-            const tempElement = document.querySelector('.weather-temp');
-            if (tempElement) {
-                const fahrenheit = parseFloat(tempElement.textContent.replace('°F', ''));
-                return (fahrenheit - 32) * 5/9; // Convert to Celsius
+        // Use fallback API as a secondary option
+        try {
+            const fallbackResponse = await fetch(`/api/${sensorType}`);
+            if (fallbackResponse.ok) {
+                const fallbackData = await fallbackResponse.json();
+                if (Array.isArray(fallbackData) && fallbackData.length > 0) {
+                    return fallbackData[0].value;
+                }
             }
-        } else if (sensorType === 'humidity') {
-            const humidityText = document.querySelector('.weather-metrics').textContent;
-            const humidityMatch = humidityText.match(/Humidity: (\d+)%/);
-            if (humidityMatch) {
-                return parseFloat(humidityMatch[1]);
-            }
+        } catch (fallbackError) {
+            console.error('Fallback API also failed:', fallbackError);
         }
         
         // Return default values if all else fails
-        return sensorType === 'temperature' ? 20 : 50; // 20°C or 50% humidity as defaults
+        return sensorType === 'temperature' ? 20 : 
+               sensorType === 'humidity' ? 50 : 
+               sensorType === 'light' ? 500 : 0;
     }
 }
-
 async function getOutfitRecommendation() {
     const recommendationElement = document.getElementById('recommendation-content');
     if (!recommendationElement) return;
@@ -268,6 +282,7 @@ async function getOutfitRecommendation() {
         `;
     }
 }
+
 // Function to format the recommendation text
 function formatRecommendationText(text) {
     // Add some basic formatting to the AI response
@@ -284,25 +299,7 @@ function formatRecommendationText(text) {
     return formatted;
 }
 
-// Initialize charts and recommendation when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    // Add console output to see when this runs
-    console.log("DOM loaded - initializing charts and recommendation");
-    
-    // Render charts
-    renderChart('temperature', 'temperature_Chart', 'Temperature (°C)', 'rgba(255, 99, 132, 1)');
-    renderChart('humidity', 'humidity_Chart', 'Humidity (%)', 'rgba(54, 162, 235, 1)');
-    renderChart('light', 'light_Chart', 'Light Level (lux)', 'rgba(255, 206, 86, 1)');
-    
-    // Get initial outfit recommendation
-    getOutfitRecommendation();
-    
-    // Set up event listener for recommendation button
-    const recommendationButton = document.getElementById('generate-recommendation');
-    if (recommendationButton) {
-        recommendationButton.addEventListener('click', getOutfitRecommendation);
-    }
-    // Function to add a message to the chat history
+// Function to add a message to the chat history
 function addMessageToChatHistory(message, isUser) {
     const chatHistory = document.getElementById('chat-history');
     const messageDiv = document.createElement('div');
@@ -350,45 +347,84 @@ async function sendMessageToAI(message) {
     }
 }
 
-// Event listener for the send button
-document.getElementById('send-button').addEventListener('click', async () => {
-    const chatInput = document.getElementById('chat-input');
-    const message = chatInput.value.trim();
-
-    if (message) {
-        // Add the user's message to the chat history
-        addMessageToChatHistory(message, true);
-
-        // Clear the input field
-        chatInput.value = '';
-
-        // Send the message to the AI API
-        const aiResponse = await sendMessageToAI(message);
-
-        // Add the AI's response to the chat history
-        addMessageToChatHistory(aiResponse, false);
+// Initialize everything when the document is ready
+document.addEventListener('DOMContentLoaded', () => {
+    console.log("DOM loaded - initializing charts and recommendation");
+    
+    // Render charts with default range
+    refreshAllCharts();
+    
+    // Get initial outfit recommendation
+    getOutfitRecommendation();
+    
+    // Set up event listener for recommendation button
+    const recommendationButton = document.getElementById('generate-recommendation');
+    if (recommendationButton) {
+        recommendationButton.addEventListener('click', getOutfitRecommendation);
     }
-});
 
-// Allow pressing Enter to send a message
-document.getElementById('chat-input').addEventListener('keypress', async (e) => {
-    if (e.key === 'Enter') {
-        const chatInput = document.getElementById('chat-input');
-        const message = chatInput.value.trim();
 
-        if (message) {
-            // Add the user's message to the chat history
-            addMessageToChatHistory(message, true);
+    // Add event listeners for range buttons
+    const rangeButtons = document.querySelectorAll('.range-button');
+    rangeButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            // Update active button styling
+            rangeButtons.forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+            
+            // Update current data range
+            currentDataRange = parseInt(this.getAttribute('data-range'));
+            console.log(`Data range changed to: ${currentDataRange}`);
+            
+            // Refresh all charts with new range
+            refreshAllCharts();
+        });
+    });
 
-            // Clear the input field
-            chatInput.value = '';
+    // Event listener for the send button
+    const sendButton = document.getElementById('send-button');
+    if (sendButton) {
+        sendButton.addEventListener('click', async () => {
+            const chatInput = document.getElementById('chat-input');
+            const message = chatInput.value.trim();
 
-            // Send the message to the AI API
-            const aiResponse = await sendMessageToAI(message);
+            if (message) {
+                // Add the user's message to the chat history
+                addMessageToChatHistory(message, true);
+
+                // Clear the input field
+                chatInput.value = '';
+
+                // Send the message to the AI API
+                const aiResponse = await sendMessageToAI(message);
+
+                // Add the AI's response to the chat history
+                addMessageToChatHistory(aiResponse, false);
+            }
+        });
+    }
+
+    // Allow pressing Enter to send a message
+    const chatInput = document.getElementById('chat-input');
+    if (chatInput) {
+        chatInput.addEventListener('keypress', async (e) => {
+            if (e.key === 'Enter') {
+                const message = chatInput.value.trim();
+
+                if (message) {
+                    // Add the user's message to the chat history
+                    addMessageToChatHistory(message, true);
+
+                    // Clear the input field
+                    chatInput.value = '';
+
+                    // Send the message to the AI
+                    const aiResponse = await sendMessageToAI(message);
 
             // Add the AI's response to the chat history
             addMessageToChatHistory(aiResponse, false);
+            }
         }
+        });
     }
-});
-});
+})

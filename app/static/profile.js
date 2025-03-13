@@ -158,12 +158,19 @@ function showTemporaryMessage(text, className) {
         message.remove();
     }, 3000);
 }
-
 // Initialize the page
 document.addEventListener('DOMContentLoaded', () => {
-    // Get current username from the page if available
+    console.log('DOM loaded');
+    const deviceList = document.getElementById('device-list');
+    console.log('Device list element:', deviceList);
     const usernameElement = document.getElementById('current-username');
+    console.log('Username element:', usernameElement);
+    
     if (usernameElement) {
         currentUsername = usernameElement.textContent || '';
+        console.log('Current username:', currentUsername);
     }
+    
+    console.log('About to load devices');
+    loadDevices();
 });
