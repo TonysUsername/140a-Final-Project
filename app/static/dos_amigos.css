@@ -1237,8 +1237,6 @@ close:focus {
 
 }
 
-
-}
 /* Weather Card Styles */
 .weather-card {
     width: 100%;
@@ -1340,4 +1338,54 @@ close:focus {
     gap: 10px;
     margin-top: 10px;
 }
+/* Add this to your dos_amigos.css file */
+.recommendation-card {
+    background-color: #f5f5f5;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin: 20px 0;
+    padding: 20px;
+}
+
+.recommendation-title {
+    color: #333;
+    font-size: 24px;
+    margin-bottom: 5px;
+}
+
+.recommendation-subtitle {
+    color: #666;
+    font-size: 14px;
+    margin-bottom: 20px;
+}
+
+.recommendation-content {
+    background-color: #fff;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 15px;
+}
+
+.recommendation-loading {
+    color: #888;
+    font-style: italic;
+}
+
+.recommendation-error {
+    color: #e74c3c;
+}
+
+.recommendation-button {
+    background-color: #3498db;
+    border: none;
+    border-radius: 5px;
+    color: white;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 10px 15px;
+    transition: background-color 0.3s;
+}
+
+.recommendation-button:hover {
+    background-color: #2980b9;
 }

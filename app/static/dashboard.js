@@ -1,3 +1,6 @@
+const BASE_URL = 'https://ece140-wi25-api.frosty-sky-f43d.workers.dev';
+const LLM_TEXT_API = `${BASE_URL}/api/v1/ai/complete`;  // Text generation endpoint
+const LLM_IMAGE_API = `${BASE_URL}/api/v1/ai/image`;    // Image generation endpoint
 // Function to format date and time properly with timezone handling
 function formatDateTime(isoString) {
     // Check if the timestamp is in ISO format, MySQL datetime format, or timestamp format
@@ -171,12 +174,132 @@ async function renderChart(sensorType, chartId, label, color) {
     });
 }
 
-// Initialize charts when DOM is loaded
+// Add this function to get the latest sensor data
+async function getLatestSensorData(sensorType) {
+    try {
+        // Try to get device-specific data first
+        const deviceSelector = document.getElementById('device-selector');
+        const deviceId = deviceSelector ? deviceSelector.value : null;
+        
+        let url = `/api/sensor/${sensorType}/latest`;
+        if (deviceId) {
+            url += `?device_id=${deviceId}`;
+        }
+        
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        return data.value;
+    } catch (error) {
+        console.error(`Error fetching latest ${sensorType} data:`, error);
+        
+        // Fallback to weather data if sensor data is unavailable
+        if (sensorType === 'temperature') {
+            const tempElement = document.querySelector('.weather-temp');
+            if (tempElement) {
+                const fahrenheit = parseFloat(tempElement.textContent.replace('°F', ''));
+                return (fahrenheit - 32) * 5/9; // Convert to Celsius
+            }
+        } else if (sensorType === 'humidity') {
+            const humidityText = document.querySelector('.weather-metrics').textContent;
+            const humidityMatch = humidityText.match(/Humidity: (\d+)%/);
+            if (humidityMatch) {
+                return parseFloat(humidityMatch[1]);
+            }
+        }
+        
+        // Return default values if all else fails
+        return sensorType === 'temperature' ? 20 : 50; // 20°C or 50% humidity as defaults
+    }
+}
+
+async function getOutfitRecommendation() {
+    const recommendationElement = document.getElementById('recommendation-content');
+    if (!recommendationElement) return;
+    recommendationElement.innerHTML = '<div class="loading">Generating recommendation...</div>';
+
+    try {
+        const temperature = await getLatestSensorData('temperature');
+        const humidity = await getLatestSensorData('humidity');
+        const tempValue = parseFloat(temperature);
+        const humidValue = parseFloat(humidity);
+
+        console.log(`Using temperature: ${tempValue}°C and humidity: ${humidValue}%`);
+
+        // Call the backend proxy endpoint
+        const response = await fetch('/proxy/ai/complete', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'email': 'nmulla@ucsd.edu',  // Include email header
+                'pid': 'A17277029'           // Include PID header
+            },
+            body: JSON.stringify({
+                prompt: `The temperature is ${tempValue}°C and humidity is ${humidValue}%. What should I wear today so that I am both comfortable and stylish?`
+            })
+        });
+
+        if (!response.ok) {
+            console.error(`Error status: ${response.status}`);
+            const errorText = await response.text();
+            console.error(`Error details: ${errorText}`);
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        if (data.result && data.result.response) {
+            recommendationElement.innerHTML = `
+                <div class="recommendation-text">
+                    ${formatRecommendationText(data.result.response)}
+                </div>
+            `;
+        } else {
+            throw new Error('Invalid response format');
+        }
+    } catch (error) {
+        console.error('Error getting outfit recommendation:', error);
+        recommendationElement.innerHTML = `
+            <div class="error-message">
+                ${error.message || 'Unable to generate recommendation. Please try again later.'}
+            </div>
+        `;
+    }
+}
+// Function to format the recommendation text
+function formatRecommendationText(text) {
+    // Add some basic formatting to the AI response
+    // Replace newlines with <br> tags
+    let formatted = text.replace(/\n/g, '<br>');
+    
+    // Bold any important keywords
+    const keywords = ['wear', 'recommended', 'suggestion', 'outfit', 'clothing'];
+    keywords.forEach(keyword => {
+        const regex = new RegExp(`\\b${keyword}\\b`, 'gi');
+        formatted = formatted.replace(regex, `<strong>${keyword}</strong>`);
+    });
+    
+    return formatted;
+}
+
+// Initialize charts and recommendation when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     // Add console output to see when this runs
-    console.log("DOM loaded - initializing charts");
+    console.log("DOM loaded - initializing charts and recommendation");
     
+    // Render charts
     renderChart('temperature', 'temperature_Chart', 'Temperature (°C)', 'rgba(255, 99, 132, 1)');
     renderChart('humidity', 'humidity_Chart', 'Humidity (%)', 'rgba(54, 162, 235, 1)');
     renderChart('light', 'light_Chart', 'Light Level (lux)', 'rgba(255, 206, 86, 1)');
+    
+    // Get initial outfit recommendation
+    getOutfitRecommendation();
+    
+    // Set up event listener for recommendation button
+    const recommendationButton = document.getElementById('generate-recommendation');
+    if (recommendationButton) {
+        recommendationButton.addEventListener('click', getOutfitRecommendation);
+    }
 });
