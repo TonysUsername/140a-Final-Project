@@ -33,6 +33,7 @@ PID = os.getenv("PID")
 # Initial users for setup
 INIT_USERS = {"alice": "pass123", "bob": "pass456", "tony": "tonypas123"}
 
+api_key = os.environ.get("API_KEY", "")
 # Sensor data model
 class SensorData(BaseModel):
     value: float
@@ -729,6 +730,10 @@ async def generate_ai_image(item_name: str = Body(...)):
     except requests.RequestException as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/weather", response_class=HTMLResponse)
+def get_weather():
+    with open("Weather/weather.html") as html_file:
+        return HTMLResponse(content = html_file.read())
 # Run the application
 if __name__ == "__main__":
     import uvicorn

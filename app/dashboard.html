@@ -5,28 +5,59 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="/static/dos_amigos.css"> <!-- Fixed static file path -->
+    <link rel="stylesheet" href="/static/dos_amigos.css">
 </head>
 <body>
     <!-- Navbar Section -->
     <nav class="navbar">
         <ul>
-            <li><a href="/user/dashboard">Dashboard</a></li> <!-- Fixed route -->
-            <li><a href="/user/wardrobe">Wardrobe</a></li> <!-- Fixed route -->
-            <li><a href="/user/profile">Profile</a></li> <!-- Fixed route -->
+            <li><a href="/user/dashboard">Dashboard</a></li>
+            <li><a href="/user/wardrobe">Wardrobe</a></li>
+            <li><a href="/user/profile">Profile</a></li>
         </ul>
     </nav>
-
+    
     <!-- Logout Button Form (Positioned top-right) -->
     <form action="/logout" method="post" class="logout-container">
         <button type="submit" class="logout-button">Logout</button>
     </form>
-
+    
     <!-- Header -->
     <header>
         <h1>Dashboard</h1>
     </header>
+    
 
+     <!-- Weather Section -->
+    <section class="weather-card">
+        <div class="weather-container">
+            <h2 class="weather-title">Weather Forecast</h2>
+            <div class="weather-subtitle">Data from National Weather Service</div>
+            
+            <div class="weather-content">
+                <div class="weather-main">
+                    <div class="weather-temp">--°F</div>
+                    <div class="weather-details">
+                        <div class="weather-condition">--</div>
+                        <div class="weather-description">--</div>
+                        <div class="weather-metrics">Humidity: --% | Wind: -- mph</div>
+                        <div class="weather-updated">Last updated: --</div>
+                    </div>
+                </div>
+                <div class="weather-icon">
+                    <!-- Weather icon will be placed here -->
+                </div>
+            </div>
+            
+            <div class="weather-search">
+                <input type="text" id="city" placeholder="Enter city name" required>
+                <button id="weather-submit">Update</button>
+            </div>
+        </div>
+    </section>
+   
+
+    
     <!-- Main Content -->
     <main>
         <div class="dashboard-container">
@@ -44,16 +75,19 @@
             </div>
         </div>
     </main>
-
+    
     <!-- Footer -->
     <footer>
         <p>&copy; 2025 Dos Amigos</p>
     </footer>
-
+    
     <!-- Script for Navbar and Page Interactions -->
-    <script src="/static/dos_amigos.js"></script> <!-- Fixed static file path -->
+    <script src="/static/dos_amigos.js"></script>
     
     <!-- Dashboard-Specific JS for Data Fetching and Chart Rendering -->
-    <script src="/static/dashboard.js"></script> <!-- Fixed static file path -->
+    <script src="/static/dashboard.js"></script>
+    
+    <!-- Weather functionality -->
+    <script src="/static/weather-dashboard.js"></script>
 </body>
 </html>
