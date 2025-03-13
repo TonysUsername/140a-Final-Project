@@ -7,11 +7,42 @@ const clothingNameInput = document.getElementById("clothingName");
 const clothingTypeInput = document.getElementById("clothingType");
 const clothingSeasonInput = document.getElementById("clothingSeason");
 const clothingColorInput = document.getElementById("clothingColor");
-const getRecommendationBtn = document.getElementById("getRecommendationBtn");
-const recommendationResult = document.getElementById("recommendationResult");
+const clothingImageUrlInput = document.getElementById("clothingImageUrl");
 
 // Load wardrobe from localStorage
 let wardrobe = JSON.parse(localStorage.getItem("wardrobe")) || [];
+
+// Function to get emoji for clothing type
+function getClothingEmoji(type) {
+    switch (type) {
+        case "Shirt": return "👕";
+        case "Pants": return "👖";
+        case "Dress": return "👗";
+        case "Jacket": return "🧥";
+        case "Shoes": return "👟";
+        case "Hat": return "🧢";
+        case "Accessory": return "💍";
+        default: return "👕";
+    }
+}
+
+// Function to get emoji for color
+function getColorEmoji(color) {
+    switch (color) {
+        case "Black": return "⚫";
+        case "White": return "⚪";
+        case "Red": return "🔴";
+        case "Blue": return "🔵";
+        case "Green": return "🟢";
+        case "Yellow": return "🟡";
+        case "Purple": return "🟣";
+        case "Brown": return "🟤";
+        case "Pink": return "💖";
+        case "Orange": return "🟠";
+        case "Gray": return "⚪";
+        default: return "";
+    }
+}
 
 // Function to render wardrobe
 function renderWardrobe() {
@@ -20,23 +51,34 @@ function renderWardrobe() {
     if (wardrobe.length === 0) {
         wardrobeContainer.innerHTML = "<p class='empty-message'>Your wardrobe is empty!</p>";
     } else {
+        // Create a wrapper for the grid
+        const gridWrapper = document.createElement("div");
+        gridWrapper.classList.add("clothing-grid");
+        
         wardrobe.forEach((item, index) => {
             const card = document.createElement("div");
             card.classList.add("clothing-card");
+            card.setAttribute("data-index", index);
+            
+            // Add animation class
+            card.classList.add("card-animation");
 
             // Get emoji for clothing type
-            let typeEmoji = "👕";
-            if (item.type === "Pants") typeEmoji = "👖";
-            else if (item.type === "Dress") typeEmoji = "👗";
-            else if (item.type === "Jacket") typeEmoji = "🧥";
-            else if (item.type === "Shoes") typeEmoji = "👟";
-            else if (item.type === "Hat") typeEmoji = "🧢";
-            else if (item.type === "Accessory") typeEmoji = "💍";
+            const typeEmoji = getClothingEmoji(item.type);
+            const colorEmoji = getColorEmoji(item.color);
+
+            // Determine whether to show an image or the emoji display
+            const imageDisplay = item.imageUrl ? 
+                `<div class="image-display">
+                    <img src="${item.imageUrl}" alt="${item.name}" onerror="this.onerror=null; this.src=''; this.parentElement.innerHTML='<span class=\\'item-emoji\\'>${typeEmoji}</span><span class=\\'color-emoji\\'>${colorEmoji}</span>';">
+                </div>` : 
+                `<div class="emoji-display">
+                    <span class="item-emoji">${typeEmoji}</span>
+                    <span class="color-emoji">${colorEmoji}</span>
+                </div>`;
 
             card.innerHTML = `
-                <div class="card-image">
-                    <img src="${item.image || '/static/images/placeholder.png'}" alt="${item.name}">
-                </div>
+                ${imageDisplay}
                 <div class="card-content">
                     <h3>${item.name}</h3>
                     <p>${typeEmoji} ${item.type}</p>
@@ -49,15 +91,26 @@ function renderWardrobe() {
                 </div>
             `;
 
-            wardrobeContainer.appendChild(card);
+            gridWrapper.appendChild(card);
         });
+        
+        wardrobeContainer.appendChild(gridWrapper);
     }
+
+    // Ensure the addClothingBtn stays visible at the bottom of the page
+    ensureAddButtonVisible();
 
     // Save updated wardrobe to localStorage
     localStorage.setItem("wardrobe", JSON.stringify(wardrobe));
     
     // Also save to server (if available)
     saveWardrobeToServer();
+}
+
+// Function to ensure the add button is always visible
+function ensureAddButtonVisible() {
+    // Make sure the button is positioned fixed at the bottom right
+    addClothingBtn.classList.add("fixed-add-btn");
 }
 
 // Function to save wardrobe to server
@@ -96,6 +149,7 @@ function editClothing(index) {
     clothingTypeInput.value = item.type;
     clothingSeasonInput.value = item.season || "";
     clothingColorInput.value = item.color || "";
+    clothingImageUrlInput.value = item.imageUrl || "";
     
     // Show the modal
     modal.style.display = "block";
@@ -112,6 +166,7 @@ addClothingBtn.addEventListener("click", () => {
     clothingTypeInput.value = "";
     clothingSeasonInput.value = "";
     clothingColorInput.value = "";
+    clothingImageUrlInput.value = "";
     
     // Reset save button
     saveClothingBtn.removeAttribute("data-edit-index");
@@ -133,11 +188,12 @@ window.addEventListener("click", (event) => {
 });
 
 // Save or update clothing
-saveClothingBtn.addEventListener("click", async () => {
+saveClothingBtn.addEventListener("click", () => {
     const name = clothingNameInput.value.trim();
     const type = clothingTypeInput.value.trim();
     const season = clothingSeasonInput.value.trim();
     const color = clothingColorInput.value.trim();
+    const imageUrl = clothingImageUrlInput.value.trim();
     const editIndex = saveClothingBtn.getAttribute("data-edit-index");
 
     if (name && type) {
@@ -146,29 +202,14 @@ saveClothingBtn.addEventListener("click", async () => {
             saveClothingBtn.textContent = "Saving...";
             saveClothingBtn.disabled = true;
             
-            // Get image URL - either generate new one or keep existing
-            let imageUrl;
-            if (editIndex !== null) {
-                // Editing existing item - keep the same image
-                imageUrl = wardrobe[editIndex].image;
-            } else {
-                // New item - generate an image
-                try {
-                    imageUrl = await generateImage(`${color} ${type} ${name}`);
-                } catch (error) {
-                    console.error("Failed to generate image:", error);
-                    imageUrl = "/static/images/placeholder.png";
-                }
-            }
-
             if (editIndex !== null) {
                 // Update existing item
                 wardrobe[editIndex] = { 
                     name, 
                     type, 
                     season, 
-                    color, 
-                    image: imageUrl 
+                    color,
+                    imageUrl
                 };
             } else {
                 // Add new item
@@ -176,8 +217,8 @@ saveClothingBtn.addEventListener("click", async () => {
                     name, 
                     type, 
                     season, 
-                    color, 
-                    image: imageUrl 
+                    color,
+                    imageUrl
                 });
             }
             
@@ -196,131 +237,11 @@ saveClothingBtn.addEventListener("click", async () => {
     }
 });
 
-async function generateImage(itemName) {
-    // First try the AI API
-    try {
-        const response = await fetch("/api/generate-image/", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ item_name: itemName }),
-        });
-
-        if (!response.ok) {
-            throw new Error("Failed to generate image");
-        }
-
-        const data = await response.json();
-        return data.image_url;
-    } catch (error) {
-        console.error("AI image generation failed:", error);
-        
-        // Fallback to placeholders
-        const type = clothingTypeInput.value.toLowerCase();
-        let placeholderPath = "/static/images/";
-        
-        if (type.includes("shirt")) placeholderPath += "shirt.png";
-        else if (type.includes("pant")) placeholderPath += "pants.png";
-        else if (type.includes("dress")) placeholderPath += "dress.png";
-        else if (type.includes("jacket")) placeholderPath += "jacket.png";
-        else if (type.includes("shoe")) placeholderPath += "shoes.png";
-        else placeholderPath += "clothing.png";
-        
-        return placeholderPath;
-    }
-}
-
-// Get clothing recommendation based on weather
-getRecommendationBtn?.addEventListener("click", async () => {
-    const temperature = document.getElementById("temperatureInput").value;
-    const humidity = document.getElementById("humidityInput").value;
-    
-    if (!temperature || !humidity) {
-        alert("Please enter both temperature and humidity values");
-        return;
-    }
-    
-    try {
-        // Show loading state
-        recommendationResult.innerHTML = "<p>Getting recommendation...</p>";
-        getRecommendationBtn.disabled = true;
-        
-        // Try to get recommendation from server
-        try {
-            const recommendation = await getRecommendation(temperature, humidity);
-            
-            // Display the recommendation
-            recommendationResult.innerHTML = `
-                <div class="recommendation-card">
-                    <h3>Today's Outfit Recommendation</h3>
-                    <p>${recommendation}</p>
-                </div>
-            `;
-        } catch (error) {
-            // Fallback to local recommendation if server fails
-            const localRecommendation = generateLocalRecommendation(temperature, humidity);
-            
-            recommendationResult.innerHTML = `
-                <div class="recommendation-card">
-                    <h3>Today's Outfit Recommendation</h3>
-                    <p>${localRecommendation}</p>
-                    <small>(Generated locally - connect to server for better recommendations)</small>
-                </div>
-            `;
-        }
-    } catch (error) {
-        recommendationResult.innerHTML = `
-            <div class="recommendation-card error">
-                <p>Error getting recommendation: ${error.message}</p>
-            </div>
-        `;
-    } finally {
-        getRecommendationBtn.disabled = false;
-    }
-});
-
-// Function to get clothing recommendation from server
-async function getRecommendation(temperature, humidity) {
-    const response = await fetch("/api/recommendation/", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ 
-            temperature: parseFloat(temperature), 
-            humidity: parseFloat(humidity),
-            wardrobe: wardrobe  // Send wardrobe data for personalized recommendations
-        }),
-    });
-
-    if (!response.ok) {
-        throw new Error("Failed to get recommendation");
-    }
-
-    const data = await response.json();
-    return data.result.response;
-}
-
-// Fallback function for local recommendations
-function generateLocalRecommendation(temperature, humidity) {
-    const temp = parseFloat(temperature);
-    
-    if (temp < 5) {
-        return "It's very cold! Wear a heavy winter coat, scarf, gloves, and a warm hat.";
-    } else if (temp < 15) {
-        return "It's cold. A jacket or light coat with a sweater would be appropriate.";
-    } else if (temp < 25) {
-        return "The weather is mild. Consider wearing long sleeves or a light sweater.";
-    } else if (temp < 30) {
-        return "It's warm. Short sleeves and light pants or skirts are recommended.";
-    } else {
-        return "It's hot! Wear light, breathable clothes like shorts and a t-shirt.";
-    }
-}
-
 // Initial render
 document.addEventListener("DOMContentLoaded", () => {
+    // Make sure the add button is always visible
+    ensureAddButtonVisible();
+    
     // Load wardrobe from server first, fall back to localStorage
     fetch("/api/get-wardrobe")
         .then(response => {

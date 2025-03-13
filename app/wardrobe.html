@@ -4,12 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Wardrobe | Digital Wardrobe</title>
-    
-    <link rel="stylesheet" href="/static/dos_amigos.css"> 
+    <link rel="stylesheet" href="/static/dos_amigos.css">
+    <link rel="stylesheet" href="/static/wardrobe.css">
     <script defer src="/static/dos_amigos.js"></script>
     <script defer src="/static/wardrobe.js"></script>
 </head>
 <body>
+
     <!-- Navbar Section -->
     <nav class="navbar">
         <ul>
@@ -30,26 +31,15 @@
     </header>
 
     <!-- Main Content -->
-    <main>
-        <div id="wardrobeContainer" class="wardrobe-grid"></div>
-        <button id="addClothingBtn" class="add-btn">+ Add Item</button>
-        
-        <!-- Weather Recommendation Section -->
-        <div class="recommendation-section">
-            <h2>Get Outfit Recommendation</h2>
-            <div class="weather-inputs">
-                <input type="number" id="temperatureInput" placeholder="Temperature (°C)">
-                <input type="number" id="humidityInput" placeholder="Humidity (%)">
-                <button id="getRecommendationBtn">Get Recommendation</button>
-            </div>
-            <div id="recommendationResult"></div>
+    <main class="wardrobe-main">
+        <!-- Add Item Button (Now inside a container for positioning) -->
+        <div class="add-button-container">
+            <button id="addClothingBtn" class="add-btn">+ Add Item</button>
         </div>
-    </main>
 
-    <!-- Footer -->
-    <footer>
-        <p>&copy; 2025 Dos Amigos</p>
-    </footer>
+        <!-- Wardrobe Items Container -->
+        <div id="wardrobeContainer" class="wardrobe-container"></div>
+    </main>
 
     <!-- Clothing Modal -->
     <div id="clothingModal" class="modal">
@@ -70,7 +60,7 @@
                     <option value="Accessory">💍 Accessory</option>
                 </select>
             </div>
-            
+
             <div class="select-container">
                 <select id="clothingSeason">
                     <option value="">Select Season</option>
@@ -81,7 +71,7 @@
                     <option value="All Seasons">🔄 All Seasons</option>
                 </select>
             </div>
-            
+
             <div class="select-container">
                 <select id="clothingColor">
                     <option value="">Select Color</option>
@@ -98,9 +88,14 @@
                     <option value="Gray">Gray</option>
                 </select>
             </div>
-            
+
+            <div class="input-container">
+                <input type="text" id="clothingImageUrl" placeholder="Image URL (optional)">
+                <p class="help-text">Paste a URL from Google Images or any clothing website</p>
+            </div>
             <button id="saveClothingBtn">Save</button>
         </div>
     </div>
+
 </body>
 </html>
