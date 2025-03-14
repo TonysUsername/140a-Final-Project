@@ -3,7 +3,7 @@ services:
     image: mysql:latest
     restart: always
     ports:
-      - '80:80'
+      - '3306:3306'
     volumes:
       - ./data:/var/lib/mysql
     env_file: .env
