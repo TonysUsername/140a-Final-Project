@@ -428,3 +428,117 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 })
+
+// Auto-update variables
+let autoUpdateEnabled = false;
+let updateInterval = 30000; // Default to 30 seconds
+let updateIntervalId = null;
+
+// Function to toggle auto-updates
+function toggleAutoUpdate() {
+    autoUpdateEnabled = !autoUpdateEnabled;
+    const toggleButton = document.getElementById('auto-update-toggle');
+    
+    if (autoUpdateEnabled) {
+        // Start the auto-update interval
+        updateIntervalId = setInterval(refreshAllCharts, updateInterval);
+        toggleButton.textContent = 'Disable Auto-Update';
+        toggleButton.classList.add('active');
+        console.log(`Auto-update enabled with ${updateInterval/1000}s interval`);
+    } else {
+        // Clear the interval
+        if (updateIntervalId) {
+            clearInterval(updateIntervalId);
+            updateIntervalId = null;
+        }
+        toggleButton.textContent = 'Enable Auto-Update';
+        toggleButton.classList.remove('active');
+        console.log('Auto-update disabled');
+    }
+}
+
+// Function to change update frequency
+function changeUpdateFrequency(seconds) {
+    updateInterval = seconds * 1000;
+    
+    // Update the active button styling
+    const frequencyButtons = document.querySelectorAll('.frequency-button');
+    frequencyButtons.forEach(btn => {
+        btn.classList.remove('active');
+        if (parseInt(btn.getAttribute('data-seconds')) === seconds) {
+            btn.classList.add('active');
+        }
+    });
+    
+    // Restart interval if auto-update is enabled
+    if (autoUpdateEnabled) {
+        if (updateIntervalId) {
+            clearInterval(updateIntervalId);
+        }
+        updateIntervalId = setInterval(refreshAllCharts, updateInterval);
+        console.log(`Update frequency changed to ${seconds} seconds`);
+    }
+}
+
+// Add this to your existing DOMContentLoaded event listener
+document.addEventListener('DOMContentLoaded', () => {
+    // Your existing initialization code...
+    
+    // Add auto-update toggle button
+    const controlsDiv = document.createElement('div');
+    controlsDiv.className = 'update-controls';
+    controlsDiv.innerHTML = `
+        <h3>Auto-Update Controls</h3>
+        <button id="auto-update-toggle" class="update-button">Enable Auto-Update</button>
+        <div class="frequency-controls">
+            <span>Update every: </span>
+            <button class="frequency-button active" data-seconds="30">30s</button>
+            <button class="frequency-button" data-seconds="60">1m</button>
+            <button class="frequency-button" data-seconds="300">5m</button>
+        </div>
+    `;
+    
+    // Insert controls before the charts or in a specific container
+    const contentContainer = document.querySelector('.content') || document.body;
+    const firstChart = document.getElementById('temperature_Chart');
+    if (firstChart && firstChart.parentNode) {
+        firstChart.parentNode.parentNode.insertBefore(controlsDiv, firstChart.parentNode);
+    } else {
+        contentContainer.insertBefore(controlsDiv, contentContainer.firstChild);
+    }
+    
+    // Add event listeners for auto-update controls
+    document.getElementById('auto-update-toggle').addEventListener('click', toggleAutoUpdate);
+    
+    const frequencyButtons = document.querySelectorAll('.frequency-button');
+    frequencyButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const seconds = parseInt(this.getAttribute('data-seconds'));
+            changeUpdateFrequency(seconds);
+        });
+    });
+    
+    // Set the initial update frequency
+    changeUpdateFrequency(30);
+    
+    // Add last update timestamp display
+    const timestampDiv = document.createElement('div');
+    timestampDiv.id = 'last-update-time';
+    timestampDiv.className = 'last-update';
+    timestampDiv.textContent = 'Last updated: ' + new Date().toLocaleString();
+    controlsDiv.appendChild(timestampDiv);
+    
+    // Modify refreshAllCharts to update the timestamp
+    const originalRefreshAllCharts = refreshAllCharts;
+    refreshAllCharts = function() {
+        originalRefreshAllCharts();
+        document.getElementById('last-update-time').textContent = 'Last updated: ' + new Date().toLocaleString();
+    };
+});
+
+// Add a function to update recommendation automatically as well
+function autoUpdateAll() {
+    refreshAllCharts();
+    getOutfitRecommendation();
+    document.getElementById('last-update-time').textContent = 'Last updated: ' + new Date().toLocaleString();
+}

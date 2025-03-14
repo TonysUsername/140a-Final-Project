@@ -3,7 +3,7 @@ services:
     image: mysql:latest
     restart: always
     ports:
-      - '3306:3306'
+      - '80:80'
     volumes:
       - ./data:/var/lib/mysql
     env_file: .env
@@ -17,7 +17,7 @@ services:
   web:
     build: .
     ports:
-      - '6543:6543'
+      - '80:80'
     volumes:
       - ./app:/code/app
     depends_on:
