@@ -10,4 +10,4 @@ COPY ./app /code/app
 
 COPY ./sample /code/sample
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "6543", "--reload"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80", "--reload"]
