@@ -31,6 +31,8 @@ def get_db_connection(max_retries: int = 12, retry_delay: int = 5) -> mysql.MySQ
                 user=os.getenv("MYSQL_USER"),
                 password=os.getenv("MYSQL_PASSWORD"),
                 database=os.getenv("MYSQL_DATABASE"),
+                port=int(os.getenv("MYSQL_PORT"))
+                ssl_ca=os.getenv("MYSQL_SSL_CA")
             )
             connection.ping(reconnect=True, attempts=1, delay=0)
             logger.info("Database connection established successfully")
