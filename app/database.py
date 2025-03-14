@@ -28,7 +28,7 @@ def get_db_connection(max_retries: int = 12, retry_delay: int = 5) -> mysql.MySQ
         try:
             connection = mysql.connect(
                 host=os.environ['MYSQL_HOST'],
-                user=os.environv['MYSQL_USER'],
+                user=os.environ['MYSQL_USER'],
                 password=os.environ['MYSQL_PASSWORD'],
                 database=os.environ['MYSQL_DATABASE'],
                 port=os.environ['MYSQL_PORT'],
